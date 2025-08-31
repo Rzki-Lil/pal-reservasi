@@ -14,7 +14,7 @@ import VerifyOtp from "./pages/VerifyOtp";
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename="/pal-reservasi">
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />

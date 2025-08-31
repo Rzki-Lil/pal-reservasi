@@ -241,6 +241,32 @@ export default function Navbar() {
                   <span>{item.label}</span>
                 </Link>
               ))}
+              {/* Profile */}
+              <div
+                className="flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-secondary-700 cursor-pointer hover:text-primary-700 group"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  navigate("/profile");
+                }}
+              >
+                {profile?.profile_picture ? (
+                  <img
+                    src={profile.profile_picture}
+                    alt="Profile"
+                    className="w-8 h-8 rounded-full object-cover border border-secondary-200"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-secondary-200 flex items-center justify-center text-secondary-500 font-bold text-base">
+                    {profile?.full_name?.[0] || "U"}
+                  </div>
+                )}
+                <span>
+                  <span className="group-hover:hidden">Profil Saya</span>
+                  <span className="hidden group-hover:inline">
+                    {profile?.full_name || user?.email}
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         )}

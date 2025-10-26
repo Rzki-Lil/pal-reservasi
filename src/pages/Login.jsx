@@ -3,12 +3,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotPhone, setForgotPhone] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
@@ -17,7 +21,7 @@ export default function Login() {
     setLoading(true);
     setError("");
 
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(username, password);
 
     if (error) {
       setError(error.message);
@@ -26,6 +30,48 @@ export default function Login() {
     }
 
     setLoading(false);
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    setForgotError("");
+    try {
+      const res = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/otp/forgot-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({ phone: forgotPhone }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setForgotError(data.message || "Gagal mengirim OTP.");
+        setForgotLoading(false);
+        return;
+      }
+      setShowForgot(false);
+      setForgotPhone("");
+      setForgotError("");
+      // Redirect to verify OTP page for password reset
+      navigate(`/verify-otp?phone=${encodeURIComponent(forgotPhone)}&forgot=1`);
+    } catch {
+      setForgotError("Gagal menghubungi server.");
+    }
+    setForgotLoading(false);
+  };
+
+  const handleForgotPhoneChange = (e) => {
+    let value = e.target.value;
+    if (value.startsWith("08")) {
+      value = "+62" + value.slice(1);
+    }
+    value = value.replace(/[^+\d]/g, "");
+    setForgotPhone(value);
   };
 
   return (
@@ -79,22 +125,22 @@ export default function Login() {
 
             <div>
               <label
-                htmlFor="email"
+                htmlFor="username"
                 className="block text-sm font-medium text-gray-700"
               >
-                Alamat Email
+                Username
               </label>
               <div className="mt-1">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="nama@gmail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Masukkan username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                 />
               </div>
             </div>
@@ -194,8 +240,76 @@ export default function Login() {
               </button>
             </div>
           </form>
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              className="text-blue-600 hover:underline text-sm"
+              onClick={() => setShowForgot(true)}
+            >
+              Lupa Password?
+            </button>
+          </div>
         </div>
       </div>
+      {/* Forgot Password Modal */}
+      {showForgot && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-large w-full max-w-sm p-6 relative">
+            <button
+              onClick={() => {
+                setShowForgot(false);
+                setForgotPhone("");
+                setForgotError("");
+              }}
+              className="absolute top-3 right-3 text-secondary-400 hover:text-secondary-600"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <h3 className="text-lg font-semibold text-secondary-900 mb-4">
+              Reset Password
+            </h3>
+            <form onSubmit={handleForgotSubmit} className="space-y-4">
+              {forgotError && (
+                <div className="bg-danger-50 border border-danger-200 rounded-lg p-3 text-danger-700 text-sm">
+                  {forgotError}
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">
+                  Masukkan nomor HP terdaftar
+                </label>
+                <input
+                  type="tel"
+                  className="input-primary"
+                  value={forgotPhone}
+                  onChange={handleForgotPhoneChange}
+                  required
+                  placeholder="+6281234567890"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                className="btn-primary w-full"
+              >
+                {forgotLoading ? "Mengirim OTP..." : "Kirim OTP"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

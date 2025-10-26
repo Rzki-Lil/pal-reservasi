@@ -4,27 +4,36 @@ import { useNavigate } from "react-router-dom";
 import Alert from "../components/Alert";
 import MapLocationPicker from "../components/MapLocationPicker";
 import Navbar from "../components/Navbar";
+import PasswordRequirements from "../components/PasswordRequirements";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth(); // tambahkan setUser dari AuthContext
 
   const [profile, setProfile] = useState(null);
-  const [fullName, setFullName] = useState("");
+  const [name, setName] = useState("");
   const [profilePicUrl, setProfilePicUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [userLocations, setUserLocations] = useState([]);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [locationForm, setLocationForm] = useState({ label: "", location: "" });
+  const [locationForm, setLocationForm] = useState({ label: "", address: "" });
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [locationPickerValue, setLocationPickerValue] = useState(null);
   const [alert, setAlert] = useState({ message: "", type: "success" });
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [pendingPhone, setPendingPhone] = useState(""); 
+  const [phone, setPhone] = useState("");
+  const [pendingPhone, setPendingPhone] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [showOldPass, setShowOldPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
   const fileInputRef = useRef();
   const navigate = useNavigate();
 
@@ -38,13 +47,13 @@ export default function Profile() {
     if (!user?.id) return;
     const { data } = await supabase
       .from("users")
-      .select("full_name, profile_picture, phone_number")
+      .select("name, profile_picture, phone, username")
       .eq("id", user.id)
       .single();
     setProfile(data);
-    setFullName(data?.full_name || "");
+    setName(data?.name || "");
     setProfilePicUrl(data?.profile_picture || "");
-    setPhoneNumber(data?.phone_number || "");
+    setPhone(data?.phone || "");
   };
 
   const fetchUserLocations = async () => {
@@ -68,14 +77,15 @@ export default function Profile() {
   const handleMapLocationChange = (val) => {
     setLocationForm({
       ...locationForm,
-      location: val.location,
+      address: val.location,
       latitude: val.latitude,
       longitude: val.longitude,
     });
     setLocationPickerValue({
       lat: val.latitude,
       lng: val.longitude,
-      label: val.location,
+      label: val.location, // label di sini harus address, bukan label lokasi
+      address: val.location,
     });
   };
 
@@ -89,9 +99,10 @@ export default function Profile() {
     e.preventDefault();
     setLocationLoading(true);
     setLocationError("");
+    // Validasi alamat harus mengandung
     if (
       !locationForm.label ||
-      !locationForm.location ||
+      !locationForm.address ||
       typeof locationForm.latitude === "undefined" ||
       typeof locationForm.longitude === "undefined"
     ) {
@@ -99,11 +110,16 @@ export default function Profile() {
       setLocationLoading(false);
       return;
     }
+    if (!locationForm.address.toLowerCase().includes("bogor")) {
+      setLocationError("Alamat harus berada di wilayah Bogor.");
+      setLocationLoading(false);
+      return;
+    }
     const { error } = await supabase.from("user_locations").insert([
       {
         user_id: user.id,
         label: locationForm.label,
-        location: locationForm.location,
+        address: locationForm.address,
         latitude: locationForm.latitude,
         longitude: locationForm.longitude,
       },
@@ -112,14 +128,14 @@ export default function Profile() {
       setLocationError(error.message);
     } else {
       setShowLocationModal(false);
-      setLocationForm({ label: "", location: "" });
+      setLocationForm({ label: "", address: "" });
       fetchUserLocations();
       setAlert({ message: "Lokasi berhasil ditambahkan!", type: "success" });
     }
     setLocationLoading(false);
   };
 
-  const handleNameChange = (e) => setFullName(e.target.value);
+  const handleNameChange = (e) => setName(e.target.value);
 
   const handleProfilePicChange = async (e) => {
     const file = e.target.files?.[0];
@@ -128,17 +144,17 @@ export default function Profile() {
     setError("");
 
     if (profilePicUrl) {
-      const oldPath = profilePicUrl.split("/user-profile/")[1];
+      const oldPath = profilePicUrl.split("/profile-picture/")[1];
       if (oldPath) {
-        await supabase.storage.from("user-profile").remove([oldPath]);
+        await supabase.storage.from("profile-picture").remove([oldPath]);
       }
     }
 
     const fileExt = file.name.split(".").pop();
     const filePath = `${user.id}_${Date.now()}.${fileExt}`;
     const { error: uploadError } = await supabase.storage
-      .from("user-profile")
-      .upload(filePath, file, { upsert: false }); 
+      .from("profile-picture")
+      .upload(filePath, file, { upsert: false });
 
     if (uploadError) {
       setError("Gagal upload foto profil: " + uploadError.message);
@@ -147,7 +163,7 @@ export default function Profile() {
     }
 
     const { data: publicUrlData } = supabase.storage
-      .from("user-profile")
+      .from("profile-picture")
       .getPublicUrl(filePath);
 
     const url = publicUrlData?.publicUrl;
@@ -158,6 +174,9 @@ export default function Profile() {
       .update({ profile_picture: url })
       .eq("id", user.id);
 
+    // Update AuthContext user agar Navbar langsung berubah
+    setUser({ ...user, profile_picture: url });
+
     setUploading(false);
   };
 
@@ -167,7 +186,7 @@ export default function Profile() {
       value = "+62" + value.slice(1);
     }
     value = value.replace(/[^+\d]/g, "");
-    setPhoneNumber(value);
+    setPhone(value);
   };
 
   const handleSave = async (e) => {
@@ -175,25 +194,30 @@ export default function Profile() {
     setSaving(true);
     setError("");
 
-    if (phoneNumber !== profile?.phone_number) {
+    // Jika nomor HP berubah, kirim OTP ke nomor baru
+    if (phone !== profile?.phone) {
       try {
-        const res = await fetch("https://api-pupr.bojay.xyz/request-otp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: phoneNumber }),
-        });
+        const res = await fetch(
+          "https://settled-modern-stinkbug.ngrok-free.app/api/otp/send",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "ngrok-skip-browser-warning": "true",
+            },
+            body: JSON.stringify({ phone }),
+          }
+        );
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Gagal mengirim OTP.");
+          setError(data.message || "Gagal mengirim OTP.");
           setSaving(false);
           return;
         }
-        setPendingPhone(phoneNumber);
         setSaving(false);
+        // Redirect ke verify-otp, kirim nomor baru dan flag ganti nomor
         navigate(
-          `/verify-otp?phone=${encodeURIComponent(
-            phoneNumber
-          )}&profileUpdate=1&full_name=${encodeURIComponent(fullName)}`
+          `/verify-otp?phone=${encodeURIComponent(phone)}&changePhone=1`
         );
         return;
       } catch {
@@ -203,9 +227,10 @@ export default function Profile() {
       }
     }
 
+    // Jika hanya nama yang berubah
     const { error } = await supabase
       .from("users")
-      .update({ full_name: fullName })
+      .update({ name })
       .eq("id", user.id);
     if (error) setError(error.message);
     else {
@@ -228,7 +253,7 @@ export default function Profile() {
       setLocationError(error.message);
     } else {
       setShowLocationModal(false);
-      setLocationForm({ label: "", location: "" });
+      setLocationForm({ label: "", address: "" });
       setLocationPickerValue(null);
       fetchUserLocations();
       setAlert({ message: "Lokasi berhasil dihapus!", type: "success" });
@@ -240,7 +265,7 @@ export default function Profile() {
     e.preventDefault();
     setLocationLoading(true);
     setLocationError("");
-    if (!locationForm.label || !locationForm.location) {
+    if (!locationForm.label || !locationForm.address) {
       setLocationError("Label dan alamat wajib diisi.");
       setLocationLoading(false);
       return;
@@ -250,7 +275,7 @@ export default function Profile() {
       .from("user_locations")
       .update({
         label: locationForm.label,
-        location: locationForm.location,
+        address: locationForm.address,
         latitude: locationForm.latitude,
         longitude: locationForm.longitude,
       })
@@ -259,13 +284,55 @@ export default function Profile() {
       setLocationError(error.message);
     } else {
       setShowLocationModal(false);
-      setLocationForm({ label: "", location: "" });
+      setLocationForm({ label: "", address: "" });
       setLocationPickerValue(null);
       fetchUserLocations();
       setAlert({ message: "Lokasi berhasil diperbarui!", type: "success" });
     }
     setLocationLoading(false);
   };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordLoading(true);
+    setPasswordError("");
+    setPasswordSuccess("");
+    try {
+      const res = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/auth/change-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({
+            oldPassword,
+            newPassword,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setPasswordError(data.message || "Gagal mengganti password.");
+      } else {
+        setPasswordSuccess("Password berhasil diganti.");
+        setOldPassword("");
+        setNewPassword("");
+        setTimeout(() => {
+          setShowPasswordModal(false);
+        }, 1500);
+      }
+    } catch {
+      setPasswordError("Gagal menghubungi server.");
+    }
+    setPasswordLoading(false);
+  };
+
+  // Tambahkan state untuk mendeteksi perubahan
+  const isChanged =
+    name !== (profile?.name || "") || phone !== (profile?.phone || "");
 
   return (
     <div className="min-h-screen bg-secondary-50">
@@ -299,7 +366,7 @@ export default function Profile() {
                       />
                     ) : (
                       <div className="w-24 h-24 rounded-full bg-secondary-200 flex items-center justify-center text-secondary-500 font-bold text-3xl">
-                        {fullName?.[0] || "U"}
+                        {name?.[0] || "U"}
                       </div>
                     )}
                     <button
@@ -346,7 +413,7 @@ export default function Profile() {
                   <input
                     type="text"
                     className="input-primary"
-                    value={fullName}
+                    value={name}
                     onChange={handleNameChange}
                     required
                   />
@@ -358,17 +425,28 @@ export default function Profile() {
                   <input
                     type="tel"
                     className="input-primary"
-                    value={phoneNumber}
+                    value={phone}
                     onChange={handlePhoneChange}
                     required
-                    placeholder={profile?.phone_number || "+6281234567890"}
+                    placeholder={profile?.phone || "+6281234567890"}
                   />
                 </div>
-                <div className="flex justify-end">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <button
+                    type="button"
+                    className="btn-secondary w-full sm:w-auto"
+                    onClick={() => setShowPasswordModal(true)}
+                  >
+                    Ganti Password
+                  </button>
                   <button
                     type="submit"
-                    className="btn-primary"
-                    disabled={saving}
+                    className={`btn-primary w-full sm:w-auto ${
+                      !isChanged
+                        ? "bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed hover:bg-gray-300"
+                        : ""
+                    }`}
+                    disabled={saving || !isChanged}
                   >
                     {saving ? "Menyimpan..." : "Simpan Perubahan"}
                   </button>
@@ -404,19 +482,19 @@ export default function Profile() {
                       onClick={() => {
                         setLocationForm({
                           label: loc.label,
-                          location: loc.location,
+                          address: loc.address,
                           latitude: loc.latitude,
                           longitude: loc.longitude,
                         });
                         setLocationPickerValue({
                           lat: loc.latitude,
                           lng: loc.longitude,
-                          label: loc.label, // <-- Ganti label jadi location
-                          location: loc.location, // <-- Tambahkan property location
+                          label: loc.address, // label di sini harus address, bukan label lokasi
+                          address: loc.address,
                         });
                         setShowLocationModal(loc.id);
                       }}
-                      title={loc.location}
+                      title={loc.address}
                       type="button"
                     >
                       {loc.label}
@@ -434,7 +512,7 @@ export default function Profile() {
               <button
                 onClick={() => {
                   setShowLocationModal(false);
-                  setLocationForm({ label: "", location: "" });
+                  setLocationForm({ label: "", address: "" });
                   setLocationError("");
                   setLocationPickerValue(null);
                 }}
@@ -523,6 +601,177 @@ export default function Profile() {
                     </button>
                   </div>
                 </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* Modal Ganti Password */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-large w-full max-w-sm p-6 relative">
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setOldPassword("");
+                  setNewPassword("");
+                  setPasswordError("");
+                  setPasswordSuccess("");
+                  setShowOldPass(false);
+                  setShowNewPass(false);
+                }}
+                className="absolute top-3 right-3 text-secondary-400 hover:text-secondary-600"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+              <h3 className="text-lg font-semibold text-secondary-900 mb-4">
+                Ganti Password
+              </h3>
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                {passwordError && (
+                  <div className="bg-danger-50 border border-danger-200 rounded-lg p-3 text-danger-700 text-sm">
+                    {passwordError}
+                  </div>
+                )}
+                {passwordSuccess && (
+                  <div className="bg-success-50 border border-success-200 rounded-lg p-3 text-success-700 text-sm">
+                    {passwordSuccess}
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-secondary-700 mb-1">
+                    Password Lama
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showOldPass ? "text" : "password"}
+                      className="input-primary pr-10"
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      required
+                      autoFocus
+                      placeholder="Masukkan password lama"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      tabIndex={-1}
+                      onClick={() => setShowOldPass((v) => !v)}
+                    >
+                      {showOldPass ? (
+                        <svg
+                          className="h-5 w-5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 11-4.243-4.243m4.243 4.243L9.88 9.88"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="h-5 w-5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-secondary-700 mb-1">
+                    Password Baru
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNewPass ? "text" : "password"}
+                      className="input-primary pr-10"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      placeholder="Password baru"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      tabIndex={-1}
+                      onClick={() => setShowNewPass((v) => !v)}
+                    >
+                      {showNewPass ? (
+                        <svg
+                          className="h-5 w-5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 11-4.243-4.243m4.243 4.243L9.88 9.88"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="h-5 w-5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <PasswordRequirements password={newPassword} />
+                </div>
+                <button
+                  type="submit"
+                  className="btn-primary w-full"
+                  disabled={passwordLoading}
+                >
+                  {passwordLoading ? "Menyimpan..." : "Simpan Password"}
+                </button>
               </form>
             </div>
           </div>

@@ -1,28 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase } from "../lib/supabase";
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [profile, setProfile] = useState(null);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (user?.id) {
-        const { data } = await supabase
-          .from("users")
-          .select("full_name, profile_picture")
-          .eq("id", user.id)
-          .single();
-        setProfile(data);
-      }
-    };
-    fetchProfile();
-  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,23 +17,27 @@ export default function Navbar() {
     return location.pathname === path;
   };
 
-  const navItems = [
-    {
-      path: "/dashboard",
-      label: "Dashboard",
-      icon: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z",
-    },
-    {
-      path: "/reservasi/buat",
-      label: "Buat Reservasi",
-      icon: "M12 6v6m0 0v6m0-6h6m-6 0H6",
-    },
-    {
-      path: "/riwayat",
-      label: "Riwayat",
-      icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
-    },
-  ];
+  // Only show navItems for non-admin users
+  const navItems =
+    user?.role === "admin"
+      ? []
+      : [
+          {
+            path: "/dashboard",
+            label: "Dashboard",
+            icon: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z",
+          },
+          {
+            path: "/reservasi/buat",
+            label: "Buat Reservasi",
+            icon: "M12 6v6m0 0v6m0-6h6m-6 0H6",
+          },
+          {
+            path: "/riwayat",
+            label: "Riwayat",
+            icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+          },
+        ];
 
   return (
     <nav className="bg-white shadow-soft border-b border-secondary-200 sticky top-0 z-50">
@@ -109,6 +97,7 @@ export default function Navbar() {
               </svg>
               <span>Kembali</span>
             </button>
+            {/* Only show navItems for non-admin */}
             {navItems.map((item) => (
               <Link
                 key={item.path}
@@ -144,22 +133,24 @@ export default function Navbar() {
               onClick={() => navigate("/profile")}
               title="Pengaturan Profil"
             >
-              {profile?.profile_picture ? (
+              {user?.profile_picture ? (
                 <img
-                  src={profile.profile_picture}
+                  src={user.profile_picture}
                   alt="Profile"
                   className="w-9 h-9 rounded-full object-cover border border-secondary-200"
                 />
               ) : (
                 <div className="w-9 h-9 rounded-full bg-secondary-200 flex items-center justify-center text-secondary-500 font-bold text-lg">
-                  {profile?.full_name?.[0] || "U"}
+                  {user?.name?.[0] || "U"}
                 </div>
               )}
               <span>
                 <p className="text-sm font-medium text-secondary-900">
-                  {profile?.full_name || user?.email}
+                  {user?.name}
                 </p>
-                <p className="text-xs text-secondary-500">Pengguna Aktif</p>
+                <p className="text-xs text-secondary-500">
+                  {user?.role === "admin" ? "Admin" : "Pengguna Aktif"}
+                </p>
               </span>
             </button>
 
@@ -214,6 +205,7 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-secondary-200 animate-slide-down">
             <div className="space-y-2">
+              {/* Only show navItems for non-admin */}
               {navItems.map((item) => (
                 <Link
                   key={item.path}
@@ -249,21 +241,21 @@ export default function Navbar() {
                   navigate("/profile");
                 }}
               >
-                {profile?.profile_picture ? (
+                {user?.profile_picture ? (
                   <img
-                    src={profile.profile_picture}
+                    src={user.profile_picture}
                     alt="Profile"
                     className="w-8 h-8 rounded-full object-cover border border-secondary-200"
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-secondary-200 flex items-center justify-center text-secondary-500 font-bold text-base">
-                    {profile?.full_name?.[0] || "U"}
+                    {user?.name?.[0] || "U"}
                   </div>
                 )}
                 <span>
                   <span className="group-hover:hidden">Profil Saya</span>
                   <span className="hidden group-hover:inline">
-                    {profile?.full_name || user?.email}
+                    {user?.name}
                   </span>
                 </span>
               </div>

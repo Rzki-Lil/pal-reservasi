@@ -1,15 +1,22 @@
 import { useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 
 export default function VerifyOtp() {
   const [searchParams] = useSearchParams();
   const phone = searchParams.get("phone") || "";
   const email = searchParams.get("email") || "";
+  const name = searchParams.get("name") || "";
+  const username = searchParams.get("username") || "";
   const password = searchParams.get("password") || "";
   const full_name = searchParams.get("full_name") || "";
   const id_number = searchParams.get("id_number") || "";
   const profileUpdate = searchParams.get("profileUpdate") === "1";
+  const forgot = searchParams.get("forgot") === "1";
+  const register = searchParams.get("register") === "1";
+  const changePhone = searchParams.get("changePhone") === "1";
+  const { token, setUser } = useAuth();
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -65,13 +72,87 @@ export default function VerifyOtp() {
     setError("");
     setSuccess("");
     try {
-      const res = await fetch("https://api-pupr.bojay.xyz/verify-otp", {
+      // Verifikasi OTP
+      const verifyUrl =
+        "https://settled-modern-stinkbug.ngrok-free.app/api/otp/verify";
+      const res = await fetch(verifyUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
         body: JSON.stringify({ phone, code: codeStr }),
       });
       const data = await res.json();
       if (res.ok) {
+        if (changePhone) {
+          // Ganti nomor HP setelah OTP diverifikasi
+          const changeRes = await fetch(
+            "https://settled-modern-stinkbug.ngrok-free.app/api/auth/change-phone",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+                "ngrok-skip-browser-warning": "true",
+              },
+              body: JSON.stringify({ newPhone: phone }),
+            }
+          );
+          const changeData = await changeRes.json();
+          if (!changeRes.ok) {
+            setError(changeData.message || "Gagal mengganti nomor HP.");
+            setLoading(false);
+            return;
+          }
+          setSuccess("Nomor HP berhasil diganti!");
+          // Update user di context
+          setUser((prev) => ({ ...prev, phone }));
+          setTimeout(() => {
+            navigate("/profile");
+          }, 1500);
+          setLoading(false);
+          return;
+        }
+        if (forgot) {
+          setSuccess("OTP terverifikasi. Silakan buat password baru.");
+          setTimeout(() => {
+            navigate(`/set-new-password?phone=${encodeURIComponent(phone)}`);
+          }, 1500);
+          setLoading(false);
+          return;
+        }
+        if (register) {
+          // Step 2: Register user setelah OTP diverifikasi
+          const regRes = await fetch(
+            "https://settled-modern-stinkbug.ngrok-free.app/api/auth/register",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "ngrok-skip-browser-warning": "true",
+              },
+              body: JSON.stringify({
+                name,
+                phone,
+                username,
+                password,
+              }),
+            }
+          );
+          const regData = await regRes.json();
+          if (!regRes.ok) {
+            setError(regData.message || "Gagal mendaftar.");
+            setLoading(false);
+            return;
+          }
+          setSuccess("Registrasi berhasil! Silakan login.");
+          setTimeout(() => {
+            navigate("/login");
+          }, 1500);
+          setLoading(false);
+          return;
+        }
         if (profileUpdate) {
           let userId = null;
           const { data: sessionData } = await supabase.auth.getSession();
@@ -131,7 +212,7 @@ export default function VerifyOtp() {
           }
         }
       } else {
-        setError(data.error || "Kode OTP salah atau kedaluwarsa.");
+        setError(data.message || "Kode OTP salah atau kedaluwarsa.");
       }
     } catch {
       setError("Gagal menghubungi server.");
@@ -150,6 +231,9 @@ export default function VerifyOtp() {
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           Masukkan kode OTP yang dikirim ke WhatsApp <b>{phone}</b>
+          {forgot && (
+            <span className="block text-danger-600 mt-1">(Reset Password)</span>
+          )}
         </p>
       </div>
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">

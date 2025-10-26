@@ -1,6 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext({});
 
@@ -10,63 +9,93 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    // Restore session from localStorage
+    const savedToken = localStorage.getItem("authToken");
+    const savedUser = localStorage.getItem("authUser");
+    if (savedToken && savedUser) {
+      // Cek token ke backend
+      fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/refresh-session",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${savedToken}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+        }
+      )
+        .then(async (res) => {
+          if (!res.ok) throw new Error("Token tidak valid");
+          const data = await res.json();
+          if (data.valid && data.user) {
+            setToken(savedToken);
+            setUser(data.user);
+            localStorage.setItem("authUser", JSON.stringify(data.user));
+          } else {
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("authUser");
+            setToken(null);
+            setUser(null);
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("authUser");
+          setToken(null);
+          setUser(null);
+        })
+        .finally(() => setLoading(false));
+    } else {
       setLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription?.unsubscribe();
+    }
   }, []);
 
-  const signUp = async (email, password, userData) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData,
-      },
-    });
-
-    if (!error && data.user) {
-      await supabase
-        .from("users")
-        .update({
-          full_name: userData.full_name,
-          phone_number: userData.phone_number,
-          id_number: userData.id_number,
-        })
-        .eq("id", data.user.id);
+  const signIn = async (username, password) => {
+    try {
+      const res = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({ username, password }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: new Error(data.error || "Login gagal") };
+      }
+      // Persist session
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("authUser", JSON.stringify(data.user));
+      setToken(data.token);
+      setUser(data.user);
+      return { data };
+    } catch {
+      return { error: new Error("Tidak dapat menghubungi server") };
     }
-
-    return { data, error };
-  };
-
-  const signIn = async (email, password) => {
-    return await supabase.auth.signInWithPassword({ email, password });
   };
 
   const signOut = async () => {
-    return await supabase.auth.signOut();
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("authUser");
+    setToken(null);
+    setUser(null);
   };
 
   const value = {
     user,
-    signUp,
+    token,
     signIn,
     signOut,
     loading,
+    setUser, // tambahkan setUser agar bisa diakses dari komponen lain
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

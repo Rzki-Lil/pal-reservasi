@@ -1,65 +1,59 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  const [userProfile, setUserProfile] = useState(null);
+  const { user, token } = useAuth();
+  const navigate = useNavigate();
+  const [userProfile, setUserProfile] = useState({
+    name: user?.name || "Pengguna",
+  });
   const [reservationStats, setReservationStats] = useState({
     total: 0,
     pending: 0,
-    confirmed: 0,
-    completed: 0,
+    paid: 0,
+    failed: 0,
   });
   const [recentReservations, setRecentReservations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchUserProfile();
-    fetchReservationStats();
-    fetchRecentReservations();
-  }, [user]);
+    // Cek role via token ke backend
+    const checkRole = async () => {
+      if (!token) return;
+      try {
+        const res = await fetch(
+          "https://settled-modern-stinkbug.ngrok-free.app/api/auth/me",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "ngrok-skip-browser-warning": "true",
+            },
+          }
+        );
+        const data = await res.json();
+        if (!res.ok || !data.role) {
+          navigate("/login");
+          return;
+        }
+        if (data.role !== "user") {
+          navigate("/admin");
+          return;
+        }
+        fetchReservations();
+      } catch {
+        navigate("/login");
+      }
+    };
+    checkRole();
+  }, [user, token]);
 
-  const fetchUserProfile = async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    if (!error) {
-      setUserProfile(data);
-    }
-  };
-
-  const fetchReservationStats = async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("reservations")
-      .select("status")
-      .eq("user_id", user.id);
-
-    if (!error) {
-      const stats = data.reduce(
-        (acc, reservation) => {
-          acc.total += 1;
-          acc[reservation.status] = (acc[reservation.status] || 0) + 1;
-          return acc;
-        },
-        { total: 0, pending: 0, confirmed: 0, completed: 0 }
-      );
-
-      setReservationStats(stats);
-    }
-  };
-
-  const fetchRecentReservations = async () => {
+  const fetchReservations = async () => {
     if (!user) return;
 
     const { data, error } = await supabase
@@ -67,16 +61,31 @@ export default function Dashboard() {
       .select(
         `
         *,
-        service_types(name),
-        user_locations(label, location)
+        services(name, price, unit),
+        user_locations(label, address),
+        assignments(
+          id,
+          assigned_at,
+          assignment_staffs(
+            users:staff_id(id, name, phone)
+          )
+        )
       `
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(3);
+      .limit(5);
 
-    if (!error) {
+    if (!error && data) {
       setRecentReservations(data);
+
+      const stats = {
+        total: data.length,
+        pending: data.filter((r) => r.status === "pending").length,
+        paid: data.filter((r) => r.status === "paid").length,
+        failed: data.filter((r) => r.status === "failed").length,
+      };
+      setReservationStats(stats);
     }
     setLoading(false);
   };
@@ -84,10 +93,10 @@ export default function Dashboard() {
   const getStatusBadge = (status) => {
     const badges = {
       pending: "bg-warning-100 text-warning-800 border-warning-200",
-      confirmed: "bg-primary-100 text-primary-800 border-primary-200",
-      in_progress: "bg-purple-100 text-purple-800 border-purple-200",
-      completed: "bg-success-100 text-success-800 border-success-200",
-      cancelled: "bg-danger-100 text-danger-800 border-danger-200",
+      paid: "bg-success-100 text-success-800 border-success-200",
+      assigned: "bg-blue-100 text-blue-800 border-blue-200",
+      failed: "bg-danger-100 text-danger-800 border-danger-200",
+      canceled: "bg-danger-100 text-danger-800 border-danger-200",
     };
     return (
       badges[status] ||
@@ -97,13 +106,63 @@ export default function Dashboard() {
 
   const getStatusText = (status) => {
     const texts = {
-      pending: "Menunggu",
-      confirmed: "Dikonfirmasi",
-      in_progress: "Berlangsung",
-      completed: "Selesai",
-      cancelled: "Dibatalkan",
+      pending: "Menunggu Pembayaran",
+      paid: "Lunas",
+      assigned: "Sudah Ditugaskan",
+      failed: "Gagal",
+      canceled: "Dibatalkan",
     };
     return texts[status] || status;
+  };
+
+  // Hitung total biaya sesuai volume
+  const getTotalPrice = (reservation) => {
+    if (!reservation.services?.price || !reservation.volume) return 0;
+    const vol = parseInt(reservation.volume, 10) || 1;
+    const multiplier = Math.ceil(vol / 3);
+    return reservation.services.price * multiplier;
+  };
+
+  const handlePayNow = async (reservationId) => {
+    try {
+      const { data: payment, error } = await supabase
+        .from("payments")
+        .select("redirect_url")
+        .eq("reservation_id", reservationId)
+        .single();
+
+      if (error || !payment?.redirect_url) {
+        alert("Link pembayaran tidak ditemukan");
+        return;
+      }
+
+      // Extract snap token dari redirect_url
+      const urlParts = payment.redirect_url.split("/");
+      const snapToken = urlParts[urlParts.length - 1];
+
+      if (window.snap && snapToken) {
+        window.snap.pay(snapToken, {
+          onSuccess: function (result) {
+            fetchReservations(); // Refresh data
+          },
+          onPending: function (result) {
+            fetchReservations();
+          },
+          onError: function (result) {
+            alert("Pembayaran gagal. Silakan coba lagi.");
+          },
+          onClose: function () {
+            fetchReservations();
+          },
+        });
+      } else {
+        // Fallback: buka di tab baru
+        window.open(payment.redirect_url, "_blank");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Gagal membuka pembayaran");
+    }
   };
 
   if (loading) {
@@ -127,7 +186,7 @@ export default function Dashboard() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-secondary-900">
-                Selamat datang, {userProfile?.full_name || "Pengguna"}! 👋
+                Selamat datang, {userProfile?.name || "Pengguna"}! 👋
               </h1>
               <p className="text-secondary-600 mt-1">
                 Kelola reservasi pengolahan air limbah Anda dengan mudah
@@ -191,7 +250,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-secondary-600">
-                  Menunggu
+                  Menunggu Pembayaran
                 </p>
                 <p className="text-3xl font-bold text-warning-600">
                   {reservationStats.pending}
@@ -218,39 +277,9 @@ export default function Dashboard() {
           <div className="card p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-secondary-600">
-                  Dikonfirmasi
-                </p>
-                <p className="text-3xl font-bold text-primary-600">
-                  {reservationStats.confirmed}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="card p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-600">
-                  Selesai
-                </p>
+                <p className="text-sm font-medium text-secondary-600">Lunas</p>
                 <p className="text-3xl font-bold text-success-600">
-                  {reservationStats.completed}
+                  {reservationStats.paid}
                 </p>
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-success-500 to-success-600 rounded-xl flex items-center justify-center">
@@ -270,10 +299,35 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          <div className="card p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-secondary-600">Gagal</p>
+                <p className="text-3xl font-bold text-danger-600">
+                  {reservationStats.failed}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-danger-500 to-danger-600 rounded-xl flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-
           <div className="lg:col-span-1">
             <div className="card p-6">
               <h2 className="text-lg font-semibold text-secondary-900 mb-4">
@@ -412,55 +466,159 @@ export default function Dashboard() {
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="grid gap-4">
                   {recentReservations.map((reservation) => (
                     <div
                       key={reservation.id}
-                      className="flex items-center justify-between p-4 border border-secondary-200 rounded-lg hover:border-secondary-300 transition-colors"
+                      className="card p-4 border border-secondary-200 hover:shadow transition"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-                          <div>
-                            <p className="font-medium text-secondary-900">
-                              {reservation.service_types?.name}
-                            </p>
-                            <p className="text-sm text-secondary-600">
-                              {reservation.user_locations?.label} -{" "}
-                              {reservation.user_locations?.location}
-                            </p>
-                            <div className="flex items-center space-x-4 mt-1">
-                              {reservation.scheduled_datetime && (
-                                <span className="text-xs text-secondary-500">
-                                  📅{" "}
-                                  {new Date(
-                                    reservation.scheduled_datetime
-                                  ).toLocaleDateString("id-ID")}
-                                </span>
-                              )}
-                              {reservation.volume && (
-                                <span className="text-xs text-secondary-500">
-                                  💧 {reservation.volume} m³
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        {reservation.total_cost && (
-                          <span className="text-sm font-medium text-secondary-900">
-                            Rp {reservation.total_cost.toLocaleString()}
-                          </span>
-                        )}
+                      {/* Status and Basic Info */}
+                      <div className="flex items-center gap-3 mb-3">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadge(
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(
                             reservation.status
                           )}`}
                         >
                           {getStatusText(reservation.status)}
                         </span>
+                        {reservation.schedule_slot && (
+                          <span className="text-xs text-secondary-500">
+                            {reservation.schedule_slot}
+                          </span>
+                        )}
                       </div>
+
+                      {/* Service and Price */}
+                      <div className="font-bold text-base text-secondary-900 flex items-center gap-2 mb-3">
+                        {reservation.services?.name}
+                        <span className="text-primary-700 font-semibold text-sm">
+                          - Rp {getTotalPrice(reservation).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* Location and Date Info */}
+                      <div className="grid md:grid-cols-2 gap-4 text-xs text-secondary-700 mb-3">
+                        <div>
+                          <span className="font-medium">Lokasi:</span>{" "}
+                          {reservation.user_locations?.label} -{" "}
+                          {reservation.user_locations?.address}
+                        </div>
+                        <div className="flex gap-4">
+                          <span>
+                            <span className="font-medium">Tanggal:</span>{" "}
+                            {new Date(
+                              reservation.service_date
+                            ).toLocaleDateString("id-ID")}
+                          </span>
+                          <span>
+                            <span className="font-medium">Volume:</span>{" "}
+                            {reservation.volume} m³
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Tombol Bayar untuk status pending */}
+                      {reservation.status === "pending" && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => handlePayNow(reservation.id)}
+                            className="w-full btn-primary text-sm py-2 flex items-center justify-center"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                              />
+                            </svg>
+                            Bayar Sekarang
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Assignment Details - Updated for Staff Only */}
+                      {reservation.status === "assigned" &&
+                        reservation.assignments?.length > 0 && (
+                          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center">
+                              <svg
+                                className="w-4 h-4 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                                />
+                              </svg>
+                              Tim yang Ditugaskan
+                            </h4>
+
+                            {reservation.assignments.map((assignment) => (
+                              <div key={assignment.id} className="space-y-2">
+                                <div className="text-xs font-medium text-blue-800">
+                                  Staff (
+                                  {assignment.assignment_staffs?.length || 0}{" "}
+                                  orang):
+                                </div>
+                                {assignment.assignment_staffs?.map(
+                                  (staffAssignment, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex items-center space-x-3 p-2 bg-white rounded-lg"
+                                    >
+                                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <svg
+                                          className="w-4 h-4 text-blue-600"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                          />
+                                        </svg>
+                                      </div>
+                                      <div>
+                                        <div className="font-medium text-blue-900 text-sm">
+                                          {staffAssignment.users?.name}
+                                        </div>
+                                        <div className="text-xs text-blue-700">
+                                          {staffAssignment.users?.phone}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            ))}
+
+                            <div className="text-xs text-blue-600 mt-2">
+                              Ditugaskan pada:{" "}
+                              {new Date(
+                                reservation.assignments[0].assigned_at
+                              ).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>

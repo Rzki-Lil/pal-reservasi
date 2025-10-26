@@ -1,91 +1,123 @@
-/* eslint-disable no-unused-vars */
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import PasswordRequirements from "../components/PasswordRequirements";
+import { validatePassword } from "../utils/passwordUtils";
 
 export default function Register() {
   const [formData, setFormData] = useState({
-    email: "",
+    name: "",
+    phone: "",
+    username: "",
     password: "",
-    full_name: "",
-    phone_number: "",
-    id_number: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const { signUp } = useAuth();
   const navigate = useNavigate();
-
-  const validatePassword = (password) => {
-    const minLength = password.length >= 8;
-    const hasUppercase = /[A-Z]/.test(password);
-    const hasLowercase = /[a-z]/.test(password);
-    const hasNumber = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    return {
-      minLength,
-      hasUppercase,
-      hasLowercase,
-      hasNumber,
-      hasSpecialChar,
-      isValid:
-        minLength &&
-        hasUppercase &&
-        hasLowercase &&
-        hasNumber &&
-        hasSpecialChar,
-    };
-  };
-
   const passwordValidation = validatePassword(formData.password);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
-      const res = await fetch("https://api-pupr.bojay.xyz/request-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: formData.phone_number }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Gagal mengirim OTP.");
+      // Step 1: Cek apakah nomor HP sudah terdaftar
+      const phoneCheckRes = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/auth/check-phone",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({ phone: formData.phone }),
+        }
+      );
+      const phoneCheckData = await phoneCheckRes.json();
+
+      if (!phoneCheckRes.ok) {
+        setError(phoneCheckData.message || "Gagal memeriksa nomor HP.");
         setLoading(false);
         return;
       }
+
+      if (!phoneCheckData.available) {
+        setError(
+          "Nomor HP sudah terdaftar. Silakan gunakan nomor lain atau login."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Cek apakah username sudah digunakan
+      const usernameCheckRes = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/auth/check-username",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({ username: formData.username }),
+        }
+      );
+      const usernameCheckData = await usernameCheckRes.json();
+
+      if (!usernameCheckRes.ok) {
+        setError(usernameCheckData.message || "Gagal memeriksa username.");
+        setLoading(false);
+        return;
+      }
+
+      if (!usernameCheckData.available) {
+        setError("Username sudah digunakan. Silakan gunakan username lain.");
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: Kirim OTP setelah validasi lolos
+      const res = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/otp/send",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({ phone: formData.phone }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || "Gagal mengirim OTP.");
+        setLoading(false);
+        return;
+      }
+
+      // Step 4: Redirect to verify-otp
       navigate(
-        `/verify-otp?phone=${encodeURIComponent(
-          formData.phone_number
-        )}&email=${encodeURIComponent(
-          formData.email
-        )}&password=${encodeURIComponent(
-          formData.password
-        )}&full_name=${encodeURIComponent(
-          formData.full_name
-        )}&id_number=${encodeURIComponent(formData.id_number)}`
+        `/verify-otp?phone=${encodeURIComponent(formData.phone)}` +
+          `&name=${encodeURIComponent(formData.name)}` +
+          `&username=${encodeURIComponent(formData.username)}` +
+          `&password=${encodeURIComponent(formData.password)}` +
+          `&register=1`
       );
     } catch {
-      setError("Gagal menghubungi server OTP.");
-      setLoading(false);
-      return;
+      setError("Gagal menghubungi server.");
     }
     setLoading(false);
   };
 
   const handleChange = (e) => {
     let { name, value } = e.target;
-    // Otomatis konversi nomor HP 08... menjadi +628...
-    if (name === "phone_number") {
+    if (name === "phone") {
       if (value.startsWith("08")) {
         value = "+62" + value.slice(1);
       }
-      // Hanya izinkan karakter + dan angka
       value = value.replace(/[^+\d]/g, "");
     }
     setFormData({
@@ -118,118 +150,92 @@ export default function Register() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-red-400"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">
-                      Terjadi kesalahan
-                    </h3>
-                    <div className="mt-2 text-sm text-red-700">{error}</div>
-                  </div>
-                </div>
+              <div className="rounded-md bg-red-50 p-4 text-red-700 text-sm">
+                {error}
               </div>
             )}
-
+            {success && (
+              <div className="rounded-md bg-green-50 p-4 text-green-700 text-sm">
+                {success}
+              </div>
+            )}
             <div>
               <label
-                htmlFor="full_name"
+                htmlFor="name"
                 className="block text-sm font-medium text-gray-700"
               >
                 Nama Lengkap
               </label>
               <div className="mt-1">
                 <input
-                  id="full_name"
-                  name="full_name"
+                  id="name"
+                  name="name"
                   type="text"
                   autoComplete="name"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Masukkan nama lengkap"
-                  value={formData.full_name}
+                  value={formData.name}
                   onChange={handleChange}
                 />
               </div>
             </div>
-
             <div>
               <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Alamat Email
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="nama@gmail.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="phone_number"
+                htmlFor="phone"
                 className="block text-sm font-medium text-gray-700"
               >
                 Nomor HP
               </label>
               <div className="mt-1">
                 <input
-                  id="phone_number"
-                  name="phone_number"
+                  id="phone"
+                  name="phone"
                   type="tel"
                   autoComplete="tel"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Contoh: +6281234567890"
-                  value={formData.phone_number}
+                  value={formData.phone}
                   onChange={handleChange}
                 />
               </div>
+              {formData.phone && (
+                <div className="mt-2 text-xs text-gray-600">
+                  Nomor HP harus aktif dan terdaftar di{" "}
+                  <span className="text-green-600 font-semibold">Whatsapp</span>
+                  . Verifikasi OTP akan dikirim ke{" "}
+                  <span className="text-green-600 font-semibold">Whatsapp</span>{" "}
+                  nomor ini.
+                </div>
+              )}
             </div>
-
             <div>
               <label
-                htmlFor="id_number"
+                htmlFor="username"
                 className="block text-sm font-medium text-gray-700"
               >
-                NIK
+                Username
               </label>
               <div className="mt-1">
                 <input
-                  id="id_number"
-                  name="id_number"
+                  id="username"
+                  name="username"
                   type="text"
+                  autoComplete="username"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Nomor Induk Kependudukan"
-                  value={formData.id_number}
+                  placeholder="Username"
+                  value={formData.username}
                   onChange={handleChange}
                 />
               </div>
+              {formData.username && (
+                <div className="mt-2 text-xs text-gray-600">
+                  Username digunakan untuk login. Harus unik dan mudah diingat.
+                </div>
+              )}
             </div>
-
             <div>
               <label
                 htmlFor="password"
@@ -291,77 +297,8 @@ export default function Register() {
                   )}
                 </button>
               </div>
-
-              {/* Password Requirements */}
-              {formData.password && (
-                <div className="mt-2 space-y-1">
-                  <div className="text-xs text-gray-600 mb-1">
-                    Syarat password:
-                  </div>
-                  <div
-                    className={`text-xs flex items-center ${
-                      passwordValidation.minLength
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    <span className="mr-1">
-                      {passwordValidation.minLength ? "✓" : "✗"}
-                    </span>
-                    Minimal 8 karakter
-                  </div>
-                  <div
-                    className={`text-xs flex items-center ${
-                      passwordValidation.hasUppercase
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    <span className="mr-1">
-                      {passwordValidation.hasUppercase ? "✓" : "✗"}
-                    </span>
-                    Huruf besar (A-Z)
-                  </div>
-                  <div
-                    className={`text-xs flex items-center ${
-                      passwordValidation.hasLowercase
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    <span className="mr-1">
-                      {passwordValidation.hasLowercase ? "✓" : "✗"}
-                    </span>
-                    Huruf kecil (a-z)
-                  </div>
-                  <div
-                    className={`text-xs flex items-center ${
-                      passwordValidation.hasNumber
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    <span className="mr-1">
-                      {passwordValidation.hasNumber ? "✓" : "✗"}
-                    </span>
-                    Angka (0-9)
-                  </div>
-                  <div
-                    className={`text-xs flex items-center ${
-                      passwordValidation.hasSpecialChar
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    <span className="mr-1">
-                      {passwordValidation.hasSpecialChar ? "✓" : "✗"}
-                    </span>
-                    Karakter khusus (!@#$%^&*)
-                  </div>
-                </div>
-              )}
+              <PasswordRequirements password={formData.password} />
             </div>
-
             <div>
               <button
                 type="submit"

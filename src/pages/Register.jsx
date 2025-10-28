@@ -7,7 +7,6 @@ export default function Register() {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
-    username: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +24,6 @@ export default function Register() {
     setSuccess("");
 
     try {
-      // Step 1: Cek apakah nomor HP sudah terdaftar
       const phoneCheckRes = await fetch(
         "https://settled-modern-stinkbug.ngrok-free.app/api/auth/check-phone",
         {
@@ -47,39 +45,10 @@ export default function Register() {
 
       if (!phoneCheckData.available) {
         setError(
-          "Nomor HP sudah terdaftar. Silakan gunakan nomor lain atau login."
+          "Nomor HP sudah terdaftar. Jika akun Anda dinonaktifkan, Anda dapat mengaktifkannya kembali."
         );
-        setLoading(false);
-        return;
       }
 
-      // Step 2: Cek apakah username sudah digunakan
-      const usernameCheckRes = await fetch(
-        "https://settled-modern-stinkbug.ngrok-free.app/api/auth/check-username",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
-          },
-          body: JSON.stringify({ username: formData.username }),
-        }
-      );
-      const usernameCheckData = await usernameCheckRes.json();
-
-      if (!usernameCheckRes.ok) {
-        setError(usernameCheckData.message || "Gagal memeriksa username.");
-        setLoading(false);
-        return;
-      }
-
-      if (!usernameCheckData.available) {
-        setError("Username sudah digunakan. Silakan gunakan username lain.");
-        setLoading(false);
-        return;
-      }
-
-      // Step 3: Kirim OTP setelah validasi lolos
       const res = await fetch(
         "https://settled-modern-stinkbug.ngrok-free.app/api/otp/send",
         {
@@ -98,11 +67,9 @@ export default function Register() {
         return;
       }
 
-      // Step 4: Redirect to verify-otp
       navigate(
         `/verify-otp?phone=${encodeURIComponent(formData.phone)}` +
           `&name=${encodeURIComponent(formData.name)}` +
-          `&username=${encodeURIComponent(formData.username)}` +
           `&password=${encodeURIComponent(formData.password)}` +
           `&register=1`
       );
@@ -115,8 +82,14 @@ export default function Register() {
   const handleChange = (e) => {
     let { name, value } = e.target;
     if (name === "phone") {
-      if (value.startsWith("08")) {
+      if (value.startsWith("0")) {
         value = "+62" + value.slice(1);
+      }
+      if (value.startsWith("8")) {
+        value = "+62" + value.slice(1);
+      }
+      if (value.startsWith("62")) {
+        value = "+6" + value.slice(1);
       }
       value = value.replace(/[^+\d]/g, "");
     }
@@ -195,7 +168,7 @@ export default function Register() {
                   autoComplete="tel"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Contoh: +6281234567890"
+                  placeholder="Masukan No HP"
                   value={formData.phone}
                   onChange={handleChange}
                 />
@@ -207,32 +180,6 @@ export default function Register() {
                   . Verifikasi OTP akan dikirim ke{" "}
                   <span className="text-green-600 font-semibold">Whatsapp</span>{" "}
                   nomor ini.
-                </div>
-              )}
-            </div>
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Username
-              </label>
-              <div className="mt-1">
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  required
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Username"
-                  value={formData.username}
-                  onChange={handleChange}
-                />
-              </div>
-              {formData.username && (
-                <div className="mt-2 text-xs text-gray-600">
-                  Username digunakan untuk login. Harus unik dan mudah diingat.
                 </div>
               )}
             </div>

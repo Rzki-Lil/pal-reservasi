@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Alert from "../components/Alert";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
@@ -20,11 +21,18 @@ export default function Dashboard() {
   });
   const [recentReservations, setRecentReservations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showNotifModal, setShowNotifModal] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState({
+    notify_reservation: true,
+    notify_information: true,
+  });
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [alert, setAlert] = useState({ message: "", type: "success" });
 
   useEffect(() => {
-    // Cek role via token ke backend
     const checkRole = async () => {
-      if (!token) return;
+      if (!token) return; // ProtectedRoute already handles this
+
       try {
         const res = await fetch(
           "https://settled-modern-stinkbug.ngrok-free.app/api/auth/me",
@@ -37,21 +45,97 @@ export default function Dashboard() {
           }
         );
         const data = await res.json();
+
         if (!res.ok || !data.role) {
           navigate("/login");
           return;
         }
+
         if (data.role !== "user") {
           navigate("/admin");
           return;
         }
+
         fetchReservations();
+        checkFirstLogin();
       } catch {
         navigate("/login");
       }
     };
-    checkRole();
+
+    if (user && token) {
+      checkRole();
+    }
   }, [user, token]);
+
+  const checkFirstLogin = async () => {
+    if (!user?.id) return;
+
+    const hasSeenNotifModal = localStorage.getItem(
+      `notif_modal_seen_${user.id}`
+    );
+
+    if (!hasSeenNotifModal) {
+      const { data } = await supabase
+        .from("users")
+        .select("notify_reservation, notify_information")
+        .eq("id", user.id)
+        .single();
+
+      if (data) {
+        setNotifPrefs({
+          notify_reservation: data.notify_reservation ?? true,
+          notify_information: data.notify_information ?? true,
+        });
+      }
+
+      setShowNotifModal(true);
+    }
+  };
+
+  const handleSaveNotifPrefs = async () => {
+    setSavingPrefs(true);
+    try {
+      const res = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/auth/update-notification-preference",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify(notifPrefs),
+        }
+      );
+
+      if (res.ok) {
+        localStorage.setItem(`notif_modal_seen_${user.id}`, "true");
+        setShowNotifModal(false);
+        setAlert({
+          message: "Preferensi notifikasi berhasil disimpan!",
+          type: "success",
+        });
+      } else {
+        setAlert({
+          message: "Gagal menyimpan preferensi notifikasi",
+          type: "error",
+        });
+      }
+    } catch (error) {
+      setAlert({
+        message: "Terjadi kesalahan saat menyimpan preferensi",
+        type: "error",
+      });
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  const handleSkipNotifModal = () => {
+    localStorage.setItem(`notif_modal_seen_${user.id}`, "true");
+    setShowNotifModal(false);
+  };
 
   const fetchReservations = async () => {
     if (!user) return;
@@ -115,7 +199,6 @@ export default function Dashboard() {
     return texts[status] || status;
   };
 
-  // Hitung total biaya sesuai volume
   const getTotalPrice = (reservation) => {
     if (!reservation.services?.price || !reservation.volume) return 0;
     const vol = parseInt(reservation.volume, 10) || 1;
@@ -136,14 +219,13 @@ export default function Dashboard() {
         return;
       }
 
-      // Extract snap token dari redirect_url
       const urlParts = payment.redirect_url.split("/");
       const snapToken = urlParts[urlParts.length - 1];
 
       if (window.snap && snapToken) {
         window.snap.pay(snapToken, {
           onSuccess: function (result) {
-            fetchReservations(); // Refresh data
+            fetchReservations();
           },
           onPending: function (result) {
             fetchReservations();
@@ -156,7 +238,6 @@ export default function Dashboard() {
           },
         });
       } else {
-        // Fallback: buka di tab baru
         window.open(payment.redirect_url, "_blank");
       }
     } catch (error) {
@@ -179,6 +260,131 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-secondary-50">
       <Navbar />
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "success" })}
+      />
+
+      {/* Notification Preferences Modal */}
+      {showNotifModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg
+                  className="w-8 h-8 text-primary-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-secondary-900 mb-2">
+                Notifikasi WhatsApp
+              </h3>
+              <p className="text-sm text-secondary-600">
+                Dapatkan update terbaru tentang reservasi dan informasi penting
+                langsung ke WhatsApp Anda
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center justify-between p-4 bg-secondary-50 rounded-lg">
+                <div className="flex-1">
+                  <p className="font-medium text-secondary-900 mb-1">
+                    Notifikasi Reservasi
+                  </p>
+                  <p className="text-xs text-secondary-600">
+                    Update status pembayaran, penugasan staff, dan jadwal
+                    layanan
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    setNotifPrefs((prev) => ({
+                      ...prev,
+                      notify_reservation: !prev.notify_reservation,
+                    }))
+                  }
+                  className={`ml-4 relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    notifPrefs.notify_reservation
+                      ? "bg-primary-600"
+                      : "bg-secondary-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      notifPrefs.notify_reservation
+                        ? "translate-x-6"
+                        : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-secondary-50 rounded-lg">
+                <div className="flex-1">
+                  <p className="font-medium text-secondary-900 mb-1">
+                    Notifikasi Informasi
+                  </p>
+                  <p className="text-xs text-secondary-600">
+                    Berita, pengumuman, dan informasi penting lainnya
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    setNotifPrefs((prev) => ({
+                      ...prev,
+                      notify_information: !prev.notify_information,
+                    }))
+                  }
+                  className={`ml-4 relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    notifPrefs.notify_information
+                      ? "bg-primary-600"
+                      : "bg-secondary-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      notifPrefs.notify_information
+                        ? "translate-x-6"
+                        : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleSkipNotifModal}
+                className="flex-1 px-4 py-2 border border-secondary-300 text-secondary-700 rounded-lg hover:bg-secondary-50 transition font-medium"
+                disabled={savingPrefs}
+              >
+                Lewati
+              </button>
+              <button
+                onClick={handleSaveNotifPrefs}
+                className="flex-1 btn-primary"
+                disabled={savingPrefs}
+              >
+                {savingPrefs ? "Menyimpan..." : "Simpan Preferensi"}
+              </button>
+            </div>
+
+            <p className="text-xs text-center text-secondary-500 mt-4">
+              Anda bisa mengubah preferensi ini kapan saja di halaman profil
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}

@@ -10,7 +10,9 @@ import Profile from "./pages/Profile";
 import Register from "./pages/Register";
 import Riwayat from "./pages/Riwayat";
 import SetNewPassword from "./pages/SetNewPassword";
+import TablesPage from "./pages/TablesPage";
 import VerifyOtp from "./pages/VerifyOtp";
+import WhatsAppNotifier from "./pages/WhatsAppNotifier";
 
 function App() {
   return (
@@ -57,6 +59,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tables"
+            element={
+              <ProtectedRoute>
+                <TablesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/whatsapp"
+            element={
+              <ProtectedRoute>
+                <WhatsAppNotifier />
               </ProtectedRoute>
             }
           />

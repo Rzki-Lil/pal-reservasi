@@ -2,27 +2,22 @@
 import { useEffect, useState } from "react";
 import {
   MdAccessTime,
-  MdArrowBack,
   MdAssignment,
   MdCalendarToday,
-  MdCheckCircle,
   MdChevronLeft,
   MdChevronRight,
-  MdDirectionsCar,
   MdExpandLess,
   MdExpandMore,
   MdGroup,
-  MdPerson,
   MdSchedule,
-  MdShield,
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import AssignmentModal from "../components/admin/AssignmentModal";
 import CalendarDay from "../components/admin/CalendarDay";
 import DayReservationsModal from "../components/admin/DayReservationsModal";
-import InfoPanel from "../components/admin/InfoPanel";
 import ReservationCard from "../components/admin/ReservationCard";
 import StatsCard from "../components/admin/StatsCard";
+import Alert from "../components/Alert";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -42,6 +37,7 @@ export default function AdminDashboard() {
   const [dayModalOpen, setDayModalOpen] = useState(false);
   const [selectedDateReservations, setSelectedDateReservations] = useState([]);
   const [selectedModalDate, setSelectedModalDate] = useState(null);
+  const [alert, setAlert] = useState({ message: "", type: "success" });
 
   useEffect(() => {
     checkAdminAccess();
@@ -54,6 +50,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user) {
       fetchAllData();
+      const interval = setInterval(() => {
+        fetchAllData();
+      }, 10000); 
+      return () => clearInterval(interval);
     }
   }, [user]);
 
@@ -64,9 +64,15 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch("https://settled-modern-stinkbug.ngrok-free.app/api/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/auth/me",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+        }
+      );
       const data = await res.json();
 
       if (!res.ok || data.role !== "admin") {
@@ -82,15 +88,33 @@ export default function AdminDashboard() {
   const fetchAllData = async () => {
     try {
       const [reservationsRes, staffRes, assignmentsRes] = await Promise.all([
-        fetch("https://settled-modern-stinkbug.ngrok-free.app/api/admin/reservations", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("https://settled-modern-stinkbug.ngrok-free.app/api/admin/users", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("https://settled-modern-stinkbug.ngrok-free.app/api/admin/assignments", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        fetch(
+          "https://settled-modern-stinkbug.ngrok-free.app/api/admin/reservations",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "ngrok-skip-browser-warning": "true",
+            },
+          }
+        ),
+        fetch(
+          "https://settled-modern-stinkbug.ngrok-free.app/api/admin/users",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "ngrok-skip-browser-warning": "true",
+            },
+          }
+        ),
+        fetch(
+          "https://settled-modern-stinkbug.ngrok-free.app/api/admin/assignments",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "ngrok-skip-browser-warning": "true",
+            },
+          }
+        ),
       ]);
 
       const [reservationsData, staffData, assignmentsData] = await Promise.all([
@@ -143,30 +167,47 @@ export default function AdminDashboard() {
   };
 
   const getAssignmentForReservation = (reservationId) => {
-    return assignments.find((a) => a.reservation_id === reservationId);
+    const assignment = assignments.find(
+      (a) => a.reservation_id === reservationId
+    );
+    if (assignment && assignment.staff_ids && assignment.staff_ids.length > 0) {
+      return assignment;
+    }
+    return null;
   };
 
   const handleAssign = async (reservationId, staffIds) => {
     try {
-      const res = await fetch("https://settled-modern-stinkbug.ngrok-free.app/api/admin/assign", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          reservation_id: reservationId,
-          staff_ids: staffIds, // Array of staff IDs
-        }),
-      });
+      const res = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/admin/assign",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({
+            reservation_id: reservationId,
+            staff_ids: staffIds,
+          }),
+        }
+      );
 
       if (res.ok) {
         await fetchAllData();
         setAssignModalOpen(false);
         setSelectedReservation(null);
+        setAlert({ message: "Staff berhasil di-assign!", type: "success" });
+      } else {
+        setAlert({ message: "Gagal meng-assign staff!", type: "error" });
       }
     } catch (error) {
       console.error("Failed to assign:", error);
+      setAlert({
+        message: "Terjadi kesalahan saat meng-assign staff!",
+        type: "error",
+      });
     }
   };
 
@@ -194,27 +235,37 @@ export default function AdminDashboard() {
     );
   };
 
-  const getUpcomingReservations = () => {
-    const today = new Date();
-    const upcoming = new Date();
-    upcoming.setDate(today.getDate() + 7); // Next 7 days
-
-    return reservations.filter((r) => {
-      const reservationDate = new Date(r.service_date);
-      return reservationDate > today && reservationDate <= upcoming;
-    });
-  };
-
-  const getRecentAssignments = () => {
-    return assignments
-      .sort((a, b) => new Date(b.assigned_at) - new Date(a.assigned_at))
-      .slice(0, 5);
-  };
-
   const handleDayClick = (date, dayReservations) => {
     setSelectedModalDate(date);
     setSelectedDateReservations(dayReservations);
     setDayModalOpen(true);
+  };
+
+  const getActualReservationStatus = (reservation) => {
+    const assignment = getAssignmentForReservation(reservation.id);
+    if (assignment) return "assigned";
+
+    if (reservation.payments && reservation.payments.length > 0) {
+      const payment = reservation.payments[0];
+      if (
+        payment.transaction_status === "settlement" ||
+        payment.transaction_status === "capture"
+      ) {
+        return "paid";
+      }
+      if (payment.transaction_status === "pending") {
+        return "pending";
+      }
+      if (
+        payment.transaction_status === "deny" ||
+        payment.transaction_status === "cancel" ||
+        payment.transaction_status === "expire"
+      ) {
+        return "failed";
+      }
+    }
+
+    return reservation.status;
   };
 
   if (loading) {
@@ -229,6 +280,11 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-secondary-50">
       {/* Navbar */}
       <Navbar />
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "success" })}
+      />
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Stats Cards */}
@@ -258,8 +314,8 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column - Calendar & Today's Reservations */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Full Width - Calendar & Today's Reservations */}
+          <div className="lg:col-span-3 space-y-6">
             {/* Compact/Expandable Calendar */}
             <div className="card">
               <div
@@ -364,8 +420,12 @@ export default function AdminDashboard() {
                           isToday={isToday}
                           reservations={dayReservations}
                           onReservationClick={(reservation) => {
-                            setSelectedReservation(reservation);
-                            setAssignModalOpen(true);
+                            const actualStatus =
+                              getActualReservationStatus(reservation);
+                            if (actualStatus === "paid") {
+                              setSelectedReservation(reservation);
+                              setAssignModalOpen(true);
+                            }
                           }}
                           onDayClick={handleDayClick}
                         />
@@ -400,98 +460,46 @@ export default function AdminDashboard() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {getTodayReservations().map((reservation) => (
-                    <ReservationCard
-                      key={reservation.id}
-                      reservation={reservation}
-                      assignment={getAssignmentForReservation(reservation.id)}
-                      onClick={(res) => {
-                        setSelectedReservation(res);
-                        setAssignModalOpen(true);
-                      }}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="space-y-3">
+                    {getTodayReservations()
+                      .slice(0, 3)
+                      .map((reservation) => (
+                        <ReservationCard
+                          key={reservation.id}
+                          reservation={reservation}
+                          assignment={getAssignmentForReservation(
+                            reservation.id
+                          )}
+                          onClick={(res) => {
+                            const actualStatus =
+                              getActualReservationStatus(res);
+                            if (actualStatus === "paid") {
+                              setSelectedReservation(res);
+                              setAssignModalOpen(true);
+                            }
+                          }}
+                        />
+                      ))}
+                  </div>
+                  {getTodayReservations().length > 3 && (
+                    <div className="mt-4 text-center">
+                      <button
+                        type="button"
+                        className="text-primary-600 hover:text-primary-700 text-sm font-medium underline"
+                        onClick={() => {
+                          setSelectedModalDate(new Date());
+                          setSelectedDateReservations(getTodayReservations());
+                          setDayModalOpen(true);
+                        }}
+                      >
+                        Lihat Semua Reservasi Hari Ini
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-          </div>
-
-          {/* Right Column - Quick Info */}
-          <div className="space-y-6">
-            {/* Upcoming Reservations */}
-            <InfoPanel
-              title="7 Hari Mendatang"
-              icon={MdSchedule}
-              emptyMessage="Tidak ada reservasi mendatang"
-            >
-              {getUpcomingReservations().length > 0 && (
-                <div className="space-y-3">
-                  {getUpcomingReservations()
-                    .slice(0, 5)
-                    .map((reservation) => (
-                      <div
-                        key={reservation.id}
-                        className="flex justify-between items-center p-3 bg-secondary-50 rounded-lg"
-                      >
-                        <div>
-                          <p className="font-medium text-sm text-secondary-900">
-                            {new Date(
-                              reservation.service_date
-                            ).toLocaleDateString("id-ID")}
-                          </p>
-                          <p className="text-xs text-secondary-600">
-                            {reservation.schedule_slot}
-                          </p>
-                        </div>
-                        <span className="text-xs text-secondary-500">
-                          {reservation.volume}m³
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </InfoPanel>
-
-            {/* Recent Assignments */}
-            <InfoPanel
-              title="Assignment Terbaru"
-              icon={MdPerson}
-              emptyMessage="Belum ada assignment"
-            >
-              {getRecentAssignments().length > 0 && (
-                <div className="space-y-3">
-                  {getRecentAssignments().map((assignment) => (
-                    <div
-                      key={assignment.id}
-                      className="p-3 bg-secondary-50 rounded-lg"
-                    >
-                      <div className="text-xs text-secondary-600 mb-1">
-                        {new Date(assignment.assigned_at).toLocaleDateString(
-                          "id-ID"
-                        )}
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-secondary-900 mb-1">
-                          Tim Staff ({assignment.staffs?.length || 0} orang):
-                        </p>
-                        <div className="text-secondary-600 space-y-1">
-                          {assignment.staffs && assignment.staffs.length > 0 ? (
-                            assignment.staffs.map((staff, idx) => (
-                              <p key={idx} className="text-xs">
-                                • {staff.name}
-                              </p>
-                            ))
-                          ) : (
-                            <p className="text-xs">Tidak ada data staff</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </InfoPanel>
           </div>
         </div>
 
@@ -502,12 +510,22 @@ export default function AdminDashboard() {
           staffList={staffList}
           currentAssignment={
             selectedReservation
-              ? {
-                  ...getAssignmentForReservation(selectedReservation.id),
-                  staff_ids:
-                    getAssignmentForReservation(selectedReservation.id)
-                      ?.staff_ids || [],
-                }
+              ? (() => {
+                  const assignment = assignments.find(
+                    (a) => a.reservation_id === selectedReservation.id
+                  );
+                  if (
+                    assignment &&
+                    assignment.staff_ids &&
+                    assignment.staff_ids.length > 0
+                  ) {
+                    return {
+                      ...assignment,
+                      staff_ids: assignment.staff_ids || [],
+                    };
+                  }
+                  return null;
+                })()
               : null
           }
           onAssign={handleAssign}
@@ -528,8 +546,11 @@ export default function AdminDashboard() {
             setSelectedModalDate(null);
           }}
           onReservationClick={(reservation) => {
-            setSelectedReservation(reservation);
-            setAssignModalOpen(true);
+            const actualStatus = getActualReservationStatus(reservation);
+            if (actualStatus === "paid") {
+              setSelectedReservation(reservation);
+              setAssignModalOpen(true);
+            }
           }}
         />
       </div>

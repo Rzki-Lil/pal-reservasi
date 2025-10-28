@@ -3,7 +3,6 @@ export default function CalendarDay({
   isCurrentMonth,
   isToday,
   reservations,
-
   onDayClick,
 }) {
   const handleDayClick = (e) => {
@@ -13,8 +12,44 @@ export default function CalendarDay({
     }
   };
 
-  const assignedCount = reservations.filter((r) => r.assignment).length;
-  const pendingCount = reservations.length - assignedCount;
+  // Helper function to get actual status
+  const getActualStatus = (reservation) => {
+    // Check if has assignment with staff
+    if (
+      reservation.assignment &&
+      reservation.assignment.staff_ids &&
+      reservation.assignment.staff_ids.length > 0
+    ) {
+      return "assigned";
+    }
+
+    // Check payment status
+    if (reservation.payments && reservation.payments.length > 0) {
+      const payment = reservation.payments[0];
+      if (
+        payment.transaction_status === "settlement" ||
+        payment.transaction_status === "capture"
+      ) {
+        return "paid";
+      }
+      if (payment.transaction_status === "pending") {
+        return "pending";
+      }
+    }
+
+    return reservation.status;
+  };
+
+  const assignedCount = reservations.filter(
+    (r) => getActualStatus(r) === "assigned"
+  ).length;
+  const paidCount = reservations.filter(
+    (r) => getActualStatus(r) === "paid"
+  ).length;
+  const pendingCount = reservations.filter((r) => {
+    const status = getActualStatus(r);
+    return status !== "assigned" && status !== "paid";
+  }).length;
 
   return (
     <div
@@ -59,6 +94,13 @@ export default function CalendarDay({
               <div className="text-xs text-success-800 bg-success-100 px-2 py-1 rounded flex items-center">
                 <span className="w-2 h-2 bg-success-500 rounded-full mr-1"></span>
                 {assignedCount} Assigned
+              </div>
+            )}
+
+            {paidCount > 0 && (
+              <div className="text-xs text-blue-800 bg-blue-100 px-2 py-1 rounded flex items-center">
+                <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                {paidCount} Paid
               </div>
             )}
 

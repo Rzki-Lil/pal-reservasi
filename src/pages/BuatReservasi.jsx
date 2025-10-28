@@ -17,16 +17,16 @@ export default function BuatReservasi() {
     service_date: "",
     notes: "",
     volume: 1,
-    schedule_slot: "", // Tambah schedule_slot
+    schedule_slot: "", 
   });
   const [services, setServices] = useState([]);
   const [userLocations, setUserLocations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [slotAvailable, setSlotAvailable] = useState(true); // Untuk status slot
 
   const [scheduleSlots, setScheduleSlots] = useState([]);
-  const [slotsStatus, setSlotsStatus] = useState({}); // status slot: {slot: true/false}
+  const [slotsStatus, setSlotsStatus] = useState({}); 
+  const [loadingSlots, setLoadingSlots] = useState(false); 
 
   function detectKabupatenFromAddress(address) {
     if (!address) return false;
@@ -41,7 +41,6 @@ export default function BuatReservasi() {
   }, []);
 
   useEffect(() => {
-    // Ambil status semua slot untuk tanggal terpilih
     if (formData.service_date) {
       fetchSlotsAvailability(formData.service_date);
     }
@@ -81,6 +80,7 @@ export default function BuatReservasi() {
   };
 
   const fetchSlotsAvailability = async (date) => {
+    setLoadingSlots(true); 
     const status = {};
     await Promise.all(
       scheduleSlots.map(async (slot) => {
@@ -103,13 +103,12 @@ export default function BuatReservasi() {
       })
     );
     setSlotsStatus(status);
-    // Reset slot jika slot yang dipilih sudah tidak tersedia
     if (formData.schedule_slot && status[formData.schedule_slot] === false) {
       setFormData((prev) => ({ ...prev, schedule_slot: "" }));
     }
+    setLoadingSlots(false); 
   };
 
-  // Hitung harga total berdasarkan volume
   const getTotalPrice = () => {
     if (!selectedService) return 0;
     const vol = parseInt(formData.volume, 10) || 1;
@@ -117,29 +116,10 @@ export default function BuatReservasi() {
     return selectedService.price * multiplier;
   };
 
-  const checkSlotAvailability = async () => {
-    setSlotAvailable(true);
-    try {
-      const res = await fetch(
-        `https://settled-modern-stinkbug.ngrok-free.app/api/reservations/availability?service_date=${encodeURIComponent(
-          formData.service_date
-        )}&schedule_slot=${encodeURIComponent(formData.schedule_slot)}`,
-        {
-          headers: {
-            "ngrok-skip-browser-warning": "true",
-          },
-        }
-      );
-      const data = await res.json();
-      setSlotAvailable(data.available);
-    } catch {
-      setSlotAvailable(true); // fallback: anggap tersedia
-    }
-  };
+  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Jika memilih lokasi, cek address dan set layanan otomatis
     if (name === "location_id") {
       const selectedLoc = userLocations.find((loc) => loc.id === value);
       if (selectedLoc) {
@@ -162,6 +142,16 @@ export default function BuatReservasi() {
         return;
       }
     }
+
+    if (name === "service_date") {
+      setFormData({
+        ...formData,
+        [name]: value,
+        schedule_slot: "", 
+      });
+      return;
+    }
+
     setFormData({
       ...formData,
       [name]: value,
@@ -189,7 +179,7 @@ export default function BuatReservasi() {
             service_date: formData.service_date,
             notes: formData.notes,
             volume: formData.volume,
-            schedule_slot: formData.schedule_slot, // Kirim ke backend
+            schedule_slot: formData.schedule_slot, 
           }),
         }
       );
@@ -197,14 +187,12 @@ export default function BuatReservasi() {
       const data = await response.json();
 
       if (response.ok) {
-        // Ambil token dari redirect_url
-        // Contoh: https://app.sandbox.midtrans.com/snap/v2/vtweb/{token}
+
         const urlParts = data.redirect_url.split("/");
         const snapToken = urlParts[urlParts.length - 1];
         if (window.snap && snapToken) {
           window.snap.pay(snapToken, {
             onSuccess: function (result) {
-              // Optional: bisa navigate ke riwayat atau tampilkan pesan sukses
               navigate("/riwayat");
             },
             onPending: function (result) {
@@ -214,12 +202,10 @@ export default function BuatReservasi() {
               setError("Pembayaran gagal. Silakan coba lagi.");
             },
             onClose: function () {
-              // User menutup popup tanpa membayar
               navigate("/riwayat");
             },
           });
         } else {
-          // Fallback jika Snap JS tidak tersedia
           window.location.href = data.redirect_url;
         }
       } else {
@@ -376,20 +362,31 @@ export default function BuatReservasi() {
                   <label className="block text-sm font-medium text-secondary-700 mb-2">
                     Pilih Slot Waktu *
                   </label>
+
+                  {/* Loading indicator */}
+                  {loadingSlots && formData.service_date && (
+                    <div className="flex items-center justify-center py-8 mb-4">
+                      <span className="text-sm text-primary-600">
+                        Mengecek ketersediaan slot...
+                      </span>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-2">
                     {scheduleSlots.map((slot) => {
                       const isBooked = slotsStatus[slot] === false;
-                      const isDisabled = isBooked || !formData.service_date;
+                      const isDisabled =
+                        isBooked || !formData.service_date || loadingSlots;
                       return (
                         <button
                           key={slot}
                           type="button"
-                          className={`px-3 py-2 rounded-lg border font-medium ${
+                          className={`px-3 py-2 rounded-lg border font-medium transition-all duration-200 ${
                             formData.schedule_slot === slot
                               ? "bg-primary-600 text-white border-primary-600"
                               : isDisabled
                               ? "bg-secondary-200 text-secondary-400 border-secondary-300 cursor-not-allowed"
-                              : "bg-white text-secondary-900 border-secondary-200 hover:bg-primary-50"
+                              : "bg-white text-secondary-900 border-secondary-200 hover:bg-primary-50 hover:border-primary-300"
                           }`}
                           disabled={isDisabled}
                           onClick={() =>
@@ -400,32 +397,48 @@ export default function BuatReservasi() {
                             }))
                           }
                           title={
-                            !formData.service_date
+                            loadingSlots
+                              ? "Sedang mengecek ketersediaan..."
+                              : !formData.service_date
                               ? "Isi tanggal layanan terlebih dahulu"
                               : isBooked
                               ? "Sudah di-booking"
-                              : ""
+                              : "Klik untuk memilih slot ini"
                           }
-                          onMouseEnter={(e) => {
-                            if (isDisabled) {
-                              e.target.style.cursor = "not-allowed";
-                            }
-                          }}
                         >
+                          {/* Hapus animasi spinner, tampilkan slot biasa */}
                           {slot}
                         </button>
                       );
                     })}
                   </div>
-                  {!formData.schedule_slot && (
+
+                  {!loadingSlots && !formData.schedule_slot && (
                     <p className="text-xs text-secondary-500 mt-2">
-                      {formData.service_date &&
-                      scheduleSlots.length > 0 &&
-                      scheduleSlots.every((slot) => slotsStatus[slot] === false)
-                        ? `Maaf reservasi penuh pada tanggal ${new Date(
+                      {!formData.service_date
+                        ? "Pilih tanggal layanan terlebih dahulu untuk melihat slot yang tersedia."
+                        : formData.service_date &&
+                          scheduleSlots.length > 0 &&
+                          scheduleSlots.every(
+                            (slot) => slotsStatus[slot] === false
+                          )
+                        ? `Maaf, semua slot sudah terisi pada tanggal ${new Date(
                             formData.service_date
-                          ).toLocaleDateString("id-ID")}`
+                          ).toLocaleDateString(
+                            "id-ID"
+                          )}. Silakan pilih tanggal lain.`
                         : "Pilih slot waktu yang tersedia."}
+                    </p>
+                  )}
+
+                  {loadingSlots && formData.service_date && (
+                    <p className="text-xs text-primary-600 mt-2">
+                      Mohon tunggu, sedang mengecek ketersediaan slot untuk
+                      tanggal{" "}
+                      {new Date(formData.service_date).toLocaleDateString(
+                        "id-ID"
+                      )}
+                      ...
                     </p>
                   )}
                 </div>
@@ -458,6 +471,7 @@ export default function BuatReservasi() {
                     type="submit"
                     disabled={
                       loading ||
+                      loadingSlots ||
                       userLocations.length === 0 ||
                       !formData.service_id ||
                       !formData.location_id ||
@@ -467,6 +481,7 @@ export default function BuatReservasi() {
                     }
                     className={`btn-primary flex-1 sm:flex-none order-1 sm:order-2 ${
                       loading ||
+                      loadingSlots ||
                       userLocations.length === 0 ||
                       !formData.service_id ||
                       !formData.location_id ||
@@ -500,6 +515,30 @@ export default function BuatReservasi() {
                           ></path>
                         </svg>
                         Membuat Reservasi...
+                      </div>
+                    ) : loadingSlots ? (
+                      <div className="flex items-center justify-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Mengecek Slot...
                       </div>
                     ) : (
                       "Buat Reservasi & Bayar"

@@ -1,4 +1,3 @@
-// filepath: d:\CODE_PROJECT\PUPR BARU\pal-reservasi\src\pages\SetNewPassword.jsx
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PasswordRequirements from "../components/PasswordRequirements";

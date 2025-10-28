@@ -8,7 +8,6 @@ export default function VerifyOtp() {
   const phone = searchParams.get("phone") || "";
   const email = searchParams.get("email") || "";
   const name = searchParams.get("name") || "";
-  const username = searchParams.get("username") || "";
   const password = searchParams.get("password") || "";
   const full_name = searchParams.get("full_name") || "";
   const id_number = searchParams.get("id_number") || "";
@@ -72,7 +71,6 @@ export default function VerifyOtp() {
     setError("");
     setSuccess("");
     try {
-      // Verifikasi OTP
       const verifyUrl =
         "https://settled-modern-stinkbug.ngrok-free.app/api/otp/verify";
       const res = await fetch(verifyUrl, {
@@ -86,7 +84,6 @@ export default function VerifyOtp() {
       const data = await res.json();
       if (res.ok) {
         if (changePhone) {
-          // Ganti nomor HP setelah OTP diverifikasi
           const changeRes = await fetch(
             "https://settled-modern-stinkbug.ngrok-free.app/api/auth/change-phone",
             {
@@ -106,7 +103,6 @@ export default function VerifyOtp() {
             return;
           }
           setSuccess("Nomor HP berhasil diganti!");
-          // Update user di context
           setUser((prev) => ({ ...prev, phone }));
           setTimeout(() => {
             navigate("/profile");
@@ -123,7 +119,6 @@ export default function VerifyOtp() {
           return;
         }
         if (register) {
-          // Step 2: Register user setelah OTP diverifikasi
           const regRes = await fetch(
             "https://settled-modern-stinkbug.ngrok-free.app/api/auth/register",
             {
@@ -135,7 +130,6 @@ export default function VerifyOtp() {
               body: JSON.stringify({
                 name,
                 phone,
-                username,
                 password,
               }),
             }
@@ -146,7 +140,15 @@ export default function VerifyOtp() {
             setLoading(false);
             return;
           }
-          setSuccess("Registrasi berhasil! Silakan login.");
+
+          if (regData.message?.includes("diaktifkan kembali")) {
+            setSuccess(
+              "Akun berhasil diaktifkan kembali! Silakan login."
+            );
+          } else {
+            setSuccess("Registrasi berhasil! Silakan login.");
+          }
+
           setTimeout(() => {
             navigate("/login");
           }, 1500);

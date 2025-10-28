@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -13,18 +13,53 @@ export default function Login() {
   const [forgotPhone, setForgotPhone] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState("");
-  const { signIn } = useAuth();
+  const { user, signIn, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-secondary-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  const handlePhoneChange = (e) => {
+    let value = e.target.value;
+    if (value.startsWith("0")) {
+      value = "+62" + value.slice(1);
+    }
+    if (value.startsWith("8")) {
+      value = "+62" + value.slice(1);
+    }
+    if (value.startsWith("62")) {
+      value = "+6" + value.slice(1);
+    }
+    value = value.replace(/[^+\d]/g, "");
+    setPhone(value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const { error } = await signIn(username, password);
+    const { error } = await signIn(phone, password);
 
     if (error) {
-      setError(error.message);
+      if (error.message.includes("dinonaktifkan")) {
+        setError(
+          "Akun Anda telah dinonaktifkan. Silakan daftar ulang menggunakan nomor HP yang sama untuk mengaktifkan kembali akun Anda."
+        );
+      } else {
+        setError(error.message);
+      }
     } else {
       navigate("/dashboard");
     }
@@ -57,7 +92,6 @@ export default function Login() {
       setShowForgot(false);
       setForgotPhone("");
       setForgotError("");
-      // Redirect to verify OTP page for password reset
       navigate(`/verify-otp?phone=${encodeURIComponent(forgotPhone)}&forgot=1`);
     } catch {
       setForgotError("Gagal menghubungi server.");
@@ -125,22 +159,22 @@ export default function Login() {
 
             <div>
               <label
-                htmlFor="username"
+                htmlFor="phone"
                 className="block text-sm font-medium text-gray-700"
               >
-                Username
+                Nomor HP
               </label>
               <div className="mt-1">
                 <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Masukkan username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Masukan No HP"
+                  value={phone}
+                  onChange={handlePhoneChange}
                 />
               </div>
             </div>

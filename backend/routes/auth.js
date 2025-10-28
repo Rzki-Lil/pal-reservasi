@@ -48,6 +48,7 @@ export default function Profile() {
   useEffect(() => {
     fetchProfile();
     fetchUserLocations();
+    // eslint-disable-next-line
   }, [user]);
 
   const fetchProfile = async () => {
@@ -412,6 +413,7 @@ export default function Profile() {
           type: "success",
         });
 
+        // Clear localStorage and redirect after delay
         setTimeout(() => {
           localStorage.removeItem("authToken");
           localStorage.removeItem("authUser");
@@ -1024,16 +1026,13 @@ export default function Profile() {
                   Yang akan terjadi:
                 </h4>
                 <ul className="text-xs text-danger-700 space-y-1">
-                  <li>• Akses login akan dihapus permanen</li>
+                  <li>• Akses login akan dihapus permanent</li>
                   <li>• Foto profil akan dihapus dari sistem</li>
-                  <li>
-                    • Data pribadi (nama, nomor HP, password) akan dihapus
-                  </li>
+                  <li>• Data pribadi (nama, nomor HP) akan dihapus</li>
                   <li>
                     • Data reservasi tetap tersimpan untuk keperluan riwayat
                   </li>
                   <li>• Anda tidak dapat login lagi dengan akun ini</li>
-                  <li>• Akun tidak dapat diaktifkan kembali</li>
                 </ul>
               </div>
 

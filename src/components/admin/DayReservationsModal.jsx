@@ -9,6 +9,32 @@ export default function DayReservationsModal({
 }) {
   if (!isOpen) return null;
 
+  // Helper function to get actual status
+  const getActualStatus = (reservation) => {
+    if (
+      reservation.assignment &&
+      reservation.assignment.staff_ids &&
+      reservation.assignment.staff_ids.length > 0
+    ) {
+      return "assigned";
+    }
+
+    if (reservation.payments && reservation.payments.length > 0) {
+      const payment = reservation.payments[0];
+      if (
+        payment.transaction_status === "settlement" ||
+        payment.transaction_status === "capture"
+      ) {
+        return "paid";
+      }
+      if (payment.transaction_status === "pending") {
+        return "pending";
+      }
+    }
+
+    return reservation.status;
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
       <div className="relative bg-white rounded-xl shadow-large w-full max-w-2xl max-h-[80vh] overflow-hidden">
@@ -72,13 +98,24 @@ export default function DayReservationsModal({
                           {reservation.schedule_slot}
                         </span>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            reservation.assignment
-                              ? "bg-success-100 text-success-800"
-                              : "bg-warning-100 text-warning-800"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${(() => {
+                            const actualStatus = getActualStatus(reservation);
+                            if (actualStatus === "assigned") {
+                              return "bg-success-100 text-success-800";
+                            } else if (actualStatus === "paid") {
+                              return "bg-blue-100 text-blue-800";
+                            } else {
+                              return "bg-warning-100 text-warning-800";
+                            }
+                          })()}`}
                         >
-                          {reservation.assignment ? "Assigned" : "Belum Assign"}
+                          {(() => {
+                            const actualStatus = getActualStatus(reservation);
+                            if (actualStatus === "assigned") return "Assigned";
+                            if (actualStatus === "paid")
+                              return "Paid - Siap Assign";
+                            return "Belum Bayar";
+                          })()}
                         </span>
                       </div>
                       <div className="text-xs text-secondary-600 space-y-1">
@@ -101,11 +138,23 @@ export default function DayReservationsModal({
                       </div>
                     </div>
                     <div className="text-xs text-secondary-500">
-                      {reservation.assignment && (
-                        <div className="text-success-600 font-medium">
-                          ✓ Staff & Kendaraan Assigned
-                        </div>
-                      )}
+                      {(() => {
+                        const actualStatus = getActualStatus(reservation);
+                        if (actualStatus === "assigned") {
+                          return (
+                            <div className="text-success-600 font-medium">
+                              ✓ Staff Assigned
+                            </div>
+                          );
+                        } else if (actualStatus === "paid") {
+                          return (
+                            <div className="text-blue-600 font-medium">
+                              💰 Siap untuk di-assign
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -122,11 +171,30 @@ export default function DayReservationsModal({
               <>
                 {" • "}
                 <span className="text-success-600 font-medium">
-                  {reservations.filter((r) => r.assignment).length} assigned
+                  {
+                    reservations.filter(
+                      (r) => getActualStatus(r) === "assigned"
+                    ).length
+                  }{" "}
+                  assigned
+                </span>
+                {" • "}
+                <span className="text-blue-600 font-medium">
+                  {
+                    reservations.filter((r) => getActualStatus(r) === "paid")
+                      .length
+                  }{" "}
+                  paid
                 </span>
                 {" • "}
                 <span className="text-warning-600 font-medium">
-                  {reservations.filter((r) => !r.assignment).length} pending
+                  {
+                    reservations.filter((r) => {
+                      const status = getActualStatus(r);
+                      return status !== "assigned" && status !== "paid";
+                    }).length
+                  }{" "}
+                  pending
                 </span>
               </>
             )}

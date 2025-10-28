@@ -92,12 +92,18 @@ export default function AssignmentModal({
                 <span className="text-secondary-600">Status:</span>
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    currentAssignment
+                    currentAssignment &&
+                    currentAssignment.staff_ids &&
+                    currentAssignment.staff_ids.length > 0
                       ? "bg-success-100 text-success-800"
                       : "bg-warning-100 text-warning-800"
                   }`}
                 >
-                  {currentAssignment ? "Sudah Diassign" : "Belum Diassign"}
+                  {currentAssignment &&
+                  currentAssignment.staff_ids &&
+                  currentAssignment.staff_ids.length > 0
+                    ? "Sudah Diassign"
+                    : "Belum Diassign"}
                 </span>
               </div>
             </div>

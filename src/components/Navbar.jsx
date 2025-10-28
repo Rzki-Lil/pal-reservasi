@@ -17,27 +17,48 @@ export default function Navbar() {
     return location.pathname === path;
   };
 
-  // Only show navItems for non-admin users
-  const navItems =
-    user?.role === "admin"
-      ? []
-      : [
-          {
-            path: "/dashboard",
-            label: "Dashboard",
-            icon: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z",
-          },
-          {
-            path: "/reservasi/buat",
-            label: "Buat Reservasi",
-            icon: "M12 6v6m0 0v6m0-6h6m-6 0H6",
-          },
-          {
-            path: "/riwayat",
-            label: "Riwayat",
-            icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
-          },
-        ];
+  const navItems = [
+    {
+      label: "Dashboard",
+      path: "/dashboard",
+      icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
+    },
+    {
+      label: "Buat Reservasi",
+      path: "/reservasi/buat",
+      icon: "M12 4v16m8-8H4",
+    },
+    {
+      label: "Riwayat",
+      path: "/riwayat",
+      icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+    },
+    {
+      label: "Profile",
+      path: "/profile",
+      icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+    },
+  ];
+
+  const adminNavItems = [
+    {
+      label: "Admin Dashboard",
+      path: "/admin",
+      icon: "M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2",
+    },
+    {
+      label: "Database Tables",
+      path: "/admin/tables",
+      icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10",
+    },
+    {
+      label: "WhatsApp Notifier",
+      path: "/admin/whatsapp",
+      icon: "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z",
+    },
+  ];
+
+  const currentNavItems = user?.role === "admin" ? adminNavItems : navItems;
 
   return (
     <nav className="bg-white shadow-soft border-b border-secondary-200 sticky top-0 z-50">
@@ -76,29 +97,31 @@ export default function Navbar() {
           </button>
 
           <div className="hidden md:flex items-center space-x-1">
-            {/* Tombol kembali */}
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-secondary-600 hover:text-primary-600 hover:bg-secondary-50"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            {/* Back Button */}
+            {location.pathname !== "/" && (
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium text-secondary-600 hover:text-primary-600 hover:bg-secondary-50 transition-all duration-200"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              <span>Kembali</span>
-            </button>
-            {/* Only show navItems for non-admin */}
-            {navItems.map((item) => (
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                <span>Kembali</span>
+              </button>
+            )}
+
+            {/* Navigation Items */}
+            {currentNavItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
@@ -206,7 +229,7 @@ export default function Navbar() {
           <div className="md:hidden py-4 border-t border-secondary-200 animate-slide-down">
             <div className="space-y-2">
               {/* Only show navItems for non-admin */}
-              {navItems.map((item) => (
+              {currentNavItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}

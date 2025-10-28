@@ -107,7 +107,6 @@ export default function Riwayat() {
           },
         });
       } else {
-        // Fallback: buka di tab baru
         window.open(payment.redirect_url, "_blank");
       }
     } catch (error) {

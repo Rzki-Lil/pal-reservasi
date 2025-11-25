@@ -1,0 +1,579 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="Mozilla/5.0" etag="DFD-Level1-Diagram" version="22.1.0" type="device">
+  <diagram name="DFD Level 1 - Sistem Reservasi PAL" id="dfd-level1-pal-reservasi">
+    <mxGraphModel dx="2000" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="DIAGRAM DFD LEVEL 1&#xa;SISTEM RESERVASI PENGELOLAAN AIR LIMBAH&#xa;UPTD PAL KOTA BOGOR" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="577" y="20" width="500" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- EXTERNAL ENTITIES -->
+        <!-- ========================================= -->
+        
+        <!-- Pelanggan (Customer) -->
+        <mxCell id="entity-pelanggan" value="PELANGGAN" style="shape=rectangle;rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="40" y="450" width="120" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- Admin -->
+        <mxCell id="entity-admin" value="ADMIN" style="shape=rectangle;rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="1494" y="200" width="120" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- Staff -->
+        <mxCell id="entity-staff" value="STAFF&#xa;LAPANGAN" style="shape=rectangle;rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="1494" y="500" width="120" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- Midtrans Payment Gateway -->
+        <mxCell id="entity-midtrans" value="MIDTRANS&#xa;(Payment Gateway)" style="shape=rectangle;rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="780" y="980" width="140" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- WhatsApp API -->
+        <mxCell id="entity-whatsapp" value="WHATSAPP API&#xa;(OTP &amp; Notifikasi)" style="shape=rectangle;rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="40" y="200" width="140" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- PROCESSES -->
+        <!-- ========================================= -->
+        
+        <!-- Process 1.0 - Autentikasi & Registrasi -->
+        <mxCell id="process-1" value="1.0&#xa;&#xa;Autentikasi &amp;&#xa;Registrasi" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="300" y="170" width="130" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 2.0 - Kelola Profil -->
+        <mxCell id="process-2" value="2.0&#xa;&#xa;Kelola Profil&#xa;&amp; Lokasi" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="300" y="400" width="130" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 3.0 - Kelola Reservasi -->
+        <mxCell id="process-3" value="3.0&#xa;&#xa;Kelola&#xa;Reservasi" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="580" y="420" width="130" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 4.0 - Proses Pembayaran -->
+        <mxCell id="process-4" value="4.0&#xa;&#xa;Proses&#xa;Pembayaran" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="780" y="700" width="130" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 5.0 - Manajemen Admin -->
+        <mxCell id="process-5" value="5.0&#xa;&#xa;Manajemen&#xa;Admin" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="1100" y="300" width="130" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 6.0 - Penugasan Staff -->
+        <mxCell id="process-6" value="6.0&#xa;&#xa;Penugasan&#xa;Staff" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="1100" y="500" width="130" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 7.0 - Notifikasi -->
+        <mxCell id="process-7" value="7.0&#xa;&#xa;Kirim&#xa;Notifikasi" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="300" y="630" width="130" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 8.0 - Lihat Riwayat -->
+        <mxCell id="process-8" value="8.0&#xa;&#xa;Lihat&#xa;Riwayat" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="580" y="630" width="130" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- DATA STORES -->
+        <!-- ========================================= -->
+        
+        <!-- D1 - Users -->
+        <mxCell id="datastore-users" value="D1    USERS" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=1;right=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=10;top=0;bottom=0" vertex="1" parent="1">
+          <mxGeometry x="510" y="180" width="120" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- D2 - User Locations -->
+        <mxCell id="datastore-locations" value="D2    USER_LOCATIONS" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=1;right=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=10;top=0;bottom=0" vertex="1" parent="1">
+          <mxGeometry x="510" y="290" width="150" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- D3 - Services -->
+        <mxCell id="datastore-services" value="D3    SERVICES" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=1;right=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=10;top=0;bottom=0" vertex="1" parent="1">
+          <mxGeometry x="800" y="350" width="120" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- D4 - Reservations -->
+        <mxCell id="datastore-reservations" value="D4    RESERVATIONS" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=1;right=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=10;top=0;bottom=0" vertex="1" parent="1">
+          <mxGeometry x="800" y="500" width="150" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- D5 - Payments -->
+        <mxCell id="datastore-payments" value="D5    PAYMENTS" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=1;right=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=10;top=0;bottom=0" vertex="1" parent="1">
+          <mxGeometry x="1000" y="750" width="130" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- D6 - Assignments -->
+        <mxCell id="datastore-assignments" value="D6    ASSIGNMENTS" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=1;right=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=10;top=0;bottom=0" vertex="1" parent="1">
+          <mxGeometry x="1300" y="435" width="140" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- D7 - Schedule Slots -->
+        <mxCell id="datastore-slots" value="D7    SCHEDULE_SLOTS" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=1;right=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=10;top=0;bottom=0" vertex="1" parent="1">
+          <mxGeometry x="800" y="420" width="150" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- DATA FLOWS - PELANGGAN -->
+        <!-- ========================================= -->
+        
+        <!-- Pelanggan -> Process 1.0 (Registrasi/Login) -->
+        <mxCell id="flow-pel-1" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="entity-pelanggan" target="process-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="100" y="300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-pel-1" value="Data Registrasi&#xa;(nama, no_hp, password)&#xa;Data Login" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="120" y="280" width="100" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 1.0 -> Pelanggan (Konfirmasi) -->
+        <mxCell id="flow-1-pel" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="process-1" target="entity-pelanggan">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="230" y="220" />
+              <mxPoint x="230" y="380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-1-pel" value="Konfirmasi&#xa;Login/Registrasi" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="170" y="340" width="70" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Pelanggan -> Process 2.0 (Kelola Profil) -->
+        <mxCell id="flow-pel-2" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="entity-pelanggan" target="process-2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-pel-2" value="Data Profil&#xa;Data Lokasi" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="180" y="420" width="70" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Pelanggan -> Process 3.0 (Buat Reservasi) -->
+        <mxCell id="flow-pel-3" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="entity-pelanggan" target="process-3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="499" />
+              <mxPoint x="480" y="470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-pel-3" value="Data Reservasi&#xa;(layanan, lokasi,&#xa;tanggal, volume, slot)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="200" y="490" width="100" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Pelanggan -> Process 8.0 (Lihat Riwayat) -->
+        <mxCell id="flow-pel-8" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="entity-pelanggan" target="process-8">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="580" />
+              <mxPoint x="200" y="680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-pel-8" value="Request&#xa;Riwayat" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="205" y="600" width="60" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 8.0 -> Pelanggan (Data Riwayat) -->
+        <mxCell id="flow-8-pel" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="process-8" target="entity-pelanggan">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="100" y="760" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-8-pel" value="Info Riwayat&#xa;Reservasi" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="250" y="745" width="70" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- DATA FLOWS - PROCESS TO DATA STORE -->
+        <!-- ========================================= -->
+        
+        <!-- Process 1.0 -> D1 Users (Simpan User) -->
+        <mxCell id="flow-1-d1" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="process-1" target="datastore-users">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-1-d1" value="Simpan Data User" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="430" y="170" width="70" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- D1 Users -> Process 1.0 (Verifikasi) -->
+        <mxCell id="flow-d1-1" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0" edge="1" parent="1" source="datastore-users" target="process-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="460" y="200" />
+              <mxPoint x="460" y="240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-d1-1" value="Data User&#xa;(Verifikasi Login)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="440" y="220" width="70" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 2.0 -> D1 Users (Update Profil) -->
+        <mxCell id="flow-2-d1" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="process-2" target="datastore-users">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="365" y="330" />
+              <mxPoint x="540" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-2-d1" value="Update Profil" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="400" y="310" width="70" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 2.0 -> D2 User Locations -->
+        <mxCell id="flow-2-d2" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="process-2" target="datastore-locations">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="460" y="430" />
+              <mxPoint x="460" y="310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-2-d2" value="Simpan Lokasi" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="460" y="350" width="60" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- D2 User Locations -> Process 3.0 -->
+        <mxCell id="flow-d2-3" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="datastore-locations" target="process-3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-d2-3" value="Data Lokasi" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="595" y="360" width="60" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- D3 Services -> Process 3.0 -->
+        <mxCell id="flow-d3-3" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="datastore-services" target="process-3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-d3-3" value="Data Layanan" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="720" y="390" width="60" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- D7 Schedule Slots -> Process 3.0 -->
+        <mxCell id="flow-d7-3" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0" edge="1" parent="1" source="datastore-slots" target="process-3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-d7-3" value="Slot Waktu" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="720" y="430" width="60" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 3.0 -> D4 Reservations -->
+        <mxCell id="flow-3-d4" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="process-3" target="datastore-reservations">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-3-d4" value="Simpan Reservasi" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="710" y="490" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 3.0 -> Process 4.0 (Trigger Payment) -->
+        <mxCell id="flow-3-4" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.7;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0" edge="1" parent="1" source="process-3" target="process-4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="680" y="600" />
+              <mxPoint x="680" y="730" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-3-4" value="Data Reservasi&#xa;(untuk pembayaran)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="680" y="620" width="90" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 4.0 -> D5 Payments -->
+        <mxCell id="flow-4-d5" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="process-4" target="datastore-payments">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-4-d5" value="Simpan Payment" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="920" y="750" width="70" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 4.0 -> Midtrans -->
+        <mxCell id="flow-4-midtrans" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="process-4" target="entity-midtrans">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-4-midtrans" value="Request Pembayaran&#xa;(order_id, amount)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="855" y="850" width="100" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Midtrans -> Process 4.0 -->
+        <mxCell id="flow-midtrans-4" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.3;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="entity-midtrans" target="process-4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="1015" />
+              <mxPoint x="720" y="850" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-midtrans-4" value="Callback&#xa;Status Bayar" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="720" y="875" width="60" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 4.0 -> D4 Reservations (Update Status) -->
+        <mxCell id="flow-4-d4" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="process-4" target="datastore-reservations">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-4-d4" value="Update Status" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="875" y="600" width="70" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- DATA FLOWS - ADMIN -->
+        <!-- ========================================= -->
+        
+        <!-- Admin -> Process 5.0 -->
+        <mxCell id="flow-admin-5" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0" edge="1" parent="1" source="entity-admin" target="process-5">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-admin-5" value="Login Admin&#xa;Request Data" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="1280" y="250" width="70" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 5.0 -> Admin (Data) -->
+        <mxCell id="flow-5-admin" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="process-5" target="entity-admin">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1350" y="370" />
+              <mxPoint x="1350" y="270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-5-admin" value="Daftar Reservasi&#xa;Statistik&#xa;Daftar Staff" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="1355" y="290" width="80" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 5.0 -> D4 Reservations (Read) -->
+        <mxCell id="flow-5-d4" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="process-5" target="datastore-reservations">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1000" y="350" />
+              <mxPoint x="1000" y="520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-5-d4" value="Baca&#xa;Reservasi" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="1000" y="410" width="60" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 5.0 -> D1 Users (Read Staff) -->
+        <mxCell id="flow-5-d1" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="process-5" target="datastore-users">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="300" />
+              <mxPoint x="700" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-5-d1" value="Baca Data&#xa;Staff" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="700" y="240" width="60" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Admin -> Process 6.0 (Assign Staff) -->
+        <mxCell id="flow-admin-6" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0" edge="1" parent="1" source="entity-admin" target="process-6">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1400" y="420" />
+              <mxPoint x="1400" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-admin-6" value="Data Penugasan&#xa;(reservasi_id, staff_ids)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="1390" y="460" width="100" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 6.0 -> D6 Assignments -->
+        <mxCell id="flow-6-d6" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="process-6" target="datastore-assignments">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-6-d6" value="Simpan&#xa;Penugasan" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="1295" y="480" width="60" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 6.0 -> D4 Reservations (Update Status to Assigned) -->
+        <mxCell id="flow-6-d4" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="process-6" target="datastore-reservations">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-6-d4" value="Update Status&#xa;(assigned)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="990" y="530" width="70" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- DATA FLOWS - STAFF -->
+        <!-- ========================================= -->
+        
+        <!-- D6 Assignments -> Staff -->
+        <mxCell id="flow-d6-staff" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0" edge="1" parent="1" source="datastore-assignments" target="entity-staff">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1460" y="455" />
+              <mxPoint x="1460" y="521" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-d6-staff" value="Info Penugasan&#xa;Detail Reservasi" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="1440" y="520" width="70" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- DATA FLOWS - NOTIFIKASI (WHATSAPP) -->
+        <!-- ========================================= -->
+        
+        <!-- Process 1.0 -> Process 7.0 (Trigger OTP) -->
+        <mxCell id="flow-1-7" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.7;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="process-1" target="process-7">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="260" y="240" />
+              <mxPoint x="260" y="560" />
+              <mxPoint x="339" y="560" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-1-7" value="Request OTP&#xa;(registrasi)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="260" y="550" width="70" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 4.0 -> Process 7.0 (Payment Notif) -->
+        <mxCell id="flow-4-7" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.7;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="process-4" target="process-7">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="770" />
+              <mxPoint x="500" y="680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-4-7" value="Notif Pembayaran" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="485" y="700" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 6.0 -> Process 7.0 (Assignment Notif) -->
+        <mxCell id="flow-6-7" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="process-6" target="process-7">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="600" y="750" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-6-7" value="Notif Penugasan" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="560" y="750" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Process 7.0 -> WhatsApp API -->
+        <mxCell id="flow-7-wa" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="process-7" target="entity-whatsapp">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="110" y="660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-7-wa" value="Kirim Pesan&#xa;(OTP/Notifikasi)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="110" y="400" width="70" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- WhatsApp API -> Pelanggan (via Process 7.0 result) -->
+        <mxCell id="flow-wa-pel" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="entity-whatsapp" target="entity-pelanggan">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="20" y="270" />
+              <mxPoint x="20" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-wa-pel" value="OTP &amp; Notifikasi&#xa;via WhatsApp" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry y="340" width="80" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- DATA FLOWS - RIWAYAT -->
+        <!-- ========================================= -->
+        
+        <!-- D4 Reservations -> Process 8.0 -->
+        <mxCell id="flow-d4-8" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="datastore-reservations" target="process-8">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="750" y="580" />
+              <mxPoint x="750" y="650" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label-d4-8" value="Data Reservasi" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8" vertex="1" parent="1">
+          <mxGeometry x="720" y="600" width="70" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- ========================================= -->
+        <!-- LEGEND -->
+        <!-- ========================================= -->
+        
+        <mxCell id="legend-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="700" width="300" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" value="LEGENDA" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="1400" y="710" width="100" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-process" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="740" width="40" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-process-text" value="Proses" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1370" y="742" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-entity-user" value="" style="shape=rectangle;rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="775" width="40" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-entity-user-text" value="Entitas (Pengguna)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1370" y="777" width="120" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-entity-ext" value="" style="shape=rectangle;rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="810" width="40" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-entity-ext-text" value="Sistem Eksternal" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1370" y="812" width="120" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-datastore" value="" style="shape=partialRectangle;whiteSpace=wrap;html=1;left=1;right=1;fillColor=#d5e8d4;strokeColor=#82b366;top=0;bottom=0" vertex="1" parent="1">
+          <mxGeometry x="1320" y="845" width="40" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-datastore-text" value="Data Store" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1370" y="847" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-flow" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1320" y="892" as="sourcePoint" />
+            <mxPoint x="1360" y="892" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend-flow-text" value="Aliran Data" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1370" y="882" width="80" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Data Stores List -->
+        <mxCell id="ds-list-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="920" width="300" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="ds-list-title" value="DAFTAR DATA STORE" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="1360" y="930" width="180" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ds-list-content" value="D1 - USERS: Data pengguna (pelanggan, admin, staff)&#xa;D2 - USER_LOCATIONS: Lokasi alamat pelanggan&#xa;D3 - SERVICES: Jenis layanan dan harga&#xa;D4 - RESERVATIONS: Data reservasi&#xa;D5 - PAYMENTS: Data pembayaran&#xa;D6 - ASSIGNMENTS: Data penugasan staff&#xa;D7 - SCHEDULE_SLOTS: Slot waktu layanan" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=9" vertex="1" parent="1">
+          <mxGeometry x="1310" y="955" width="280" height="120" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

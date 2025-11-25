@@ -85,7 +85,7 @@ Diagram ini menjabarkan proses-proses detail dalam sistem:
 ## Alur Sistem Lengkap
 
 ### Alur Registrasi:
-1. Pelanggan mengisi form registrasi (nama, no HP, password)
+1. Pelanggan mengisi form registrasi (nama, no. HP, password)
 2. Sistem mengirim OTP ke WhatsApp
 3. Pelanggan verifikasi OTP
 4. Data user disimpan ke database
@@ -112,7 +112,7 @@ Diagram ini menjabarkan proses-proses detail dalam sistem:
 - **Backend:** Node.js (Express)
 - **Database:** Supabase (PostgreSQL)
 - **Payment Gateway:** Midtrans
-- **Notifikasi:** WhatsApp API via Fonnte
+- **Notifikasi:** WhatsApp API (via Fonnte)
 
 ---
 

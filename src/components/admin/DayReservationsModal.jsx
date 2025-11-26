@@ -9,8 +9,11 @@ export default function DayReservationsModal({
 }) {
   if (!isOpen) return null;
 
-  // Helper function to get actual status
   const getActualStatus = (reservation) => {
+    if (reservation.status === "failed" || reservation.status === "canceled") {
+      return reservation.status;
+    }
+
     if (
       reservation.assignment &&
       reservation.assignment.staff_ids &&
@@ -21,12 +24,22 @@ export default function DayReservationsModal({
 
     if (reservation.payments && reservation.payments.length > 0) {
       const payment = reservation.payments[0];
+
+      if (
+        payment.transaction_status === "deny" ||
+        payment.transaction_status === "cancel" ||
+        payment.transaction_status === "expire"
+      ) {
+        return "failed";
+      }
+
       if (
         payment.transaction_status === "settlement" ||
         payment.transaction_status === "capture"
       ) {
         return "paid";
       }
+
       if (payment.transaction_status === "pending") {
         return "pending";
       }
@@ -34,6 +47,20 @@ export default function DayReservationsModal({
 
     return reservation.status;
   };
+
+  // compute summary counts
+  const assignedCount = reservations.filter(
+    (r) => getActualStatus(r) === "assigned"
+  ).length;
+  const paidCount = reservations.filter((r) => getActualStatus(r) === "paid")
+    .length;
+  const failedCount = reservations.filter((r) => {
+    const s = getActualStatus(r);
+    return s === "failed" || s === "canceled";
+  }).length;
+  const pendingCount = reservations.filter(
+    (r) => getActualStatus(r) === "pending"
+  ).length;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
@@ -104,6 +131,11 @@ export default function DayReservationsModal({
                               return "bg-success-100 text-success-800";
                             } else if (actualStatus === "paid") {
                               return "bg-blue-100 text-blue-800";
+                            } else if (
+                              actualStatus === "failed" ||
+                              actualStatus === "canceled"
+                            ) {
+                              return "bg-danger-100 text-danger-800";
                             } else {
                               return "bg-warning-100 text-warning-800";
                             }
@@ -114,6 +146,8 @@ export default function DayReservationsModal({
                             if (actualStatus === "assigned") return "Assigned";
                             if (actualStatus === "paid")
                               return "Paid - Siap Assign";
+                            if (actualStatus === "failed") return "Failed";
+                            if (actualStatus === "canceled") return "Canceled";
                             return "Belum Bayar";
                           })()}
                         </span>
@@ -152,6 +186,18 @@ export default function DayReservationsModal({
                               💰 Siap untuk di-assign
                             </div>
                           );
+                        } else if (
+                          actualStatus === "failed" ||
+                          actualStatus === "canceled"
+                        ) {
+                          return (
+                            <div className="text-danger-600 font-medium">
+                              ✗{" "}
+                              {actualStatus === "failed"
+                                ? "Gagal"
+                                : "Dibatalkan"}
+                            </div>
+                          );
                         }
                         return null;
                       })()}
@@ -171,30 +217,19 @@ export default function DayReservationsModal({
               <>
                 {" • "}
                 <span className="text-success-600 font-medium">
-                  {
-                    reservations.filter(
-                      (r) => getActualStatus(r) === "assigned"
-                    ).length
-                  }{" "}
-                  assigned
+                  {assignedCount} assigned
                 </span>
                 {" • "}
                 <span className="text-blue-600 font-medium">
-                  {
-                    reservations.filter((r) => getActualStatus(r) === "paid")
-                      .length
-                  }{" "}
-                  paid
+                  {paidCount} paid
+                </span>
+                {" • "}
+                <span className="text-danger-600 font-medium">
+                  {failedCount} failed
                 </span>
                 {" • "}
                 <span className="text-warning-600 font-medium">
-                  {
-                    reservations.filter((r) => {
-                      const status = getActualStatus(r);
-                      return status !== "assigned" && status !== "paid";
-                    }).length
-                  }{" "}
-                  pending
+                  {pendingCount} pending
                 </span>
               </>
             )}

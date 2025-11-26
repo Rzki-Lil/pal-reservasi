@@ -242,26 +242,36 @@ export default function AdminDashboard() {
   };
 
   const getActualReservationStatus = (reservation) => {
+    // Check for failed or canceled status from reservation.status first
+    if (reservation.status === "failed" || reservation.status === "canceled") {
+      return reservation.status;
+    }
+
     const assignment = getAssignmentForReservation(reservation.id);
     if (assignment) return "assigned";
 
+    // Check payment status - prioritize failed states
     if (reservation.payments && reservation.payments.length > 0) {
       const payment = reservation.payments[0];
-      if (
-        payment.transaction_status === "settlement" ||
-        payment.transaction_status === "capture"
-      ) {
-        return "paid";
-      }
-      if (payment.transaction_status === "pending") {
-        return "pending";
-      }
+      
+      // Check for failed payment status first
       if (
         payment.transaction_status === "deny" ||
         payment.transaction_status === "cancel" ||
         payment.transaction_status === "expire"
       ) {
         return "failed";
+      }
+      
+      if (
+        payment.transaction_status === "settlement" ||
+        payment.transaction_status === "capture"
+      ) {
+        return "paid";
+      }
+      
+      if (payment.transaction_status === "pending") {
+        return "pending";
       }
     }
 

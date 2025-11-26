@@ -12,44 +12,8 @@ export default function CalendarDay({
     }
   };
 
-  // Helper function to get actual status
-  const getActualStatus = (reservation) => {
-    // Check if has assignment with staff
-    if (
-      reservation.assignment &&
-      reservation.assignment.staff_ids &&
-      reservation.assignment.staff_ids.length > 0
-    ) {
-      return "assigned";
-    }
-
-    // Check payment status
-    if (reservation.payments && reservation.payments.length > 0) {
-      const payment = reservation.payments[0];
-      if (
-        payment.transaction_status === "settlement" ||
-        payment.transaction_status === "capture"
-      ) {
-        return "paid";
-      }
-      if (payment.transaction_status === "pending") {
-        return "pending";
-      }
-    }
-
-    return reservation.status;
-  };
-
-  const assignedCount = reservations.filter(
-    (r) => getActualStatus(r) === "assigned"
-  ).length;
-  const paidCount = reservations.filter(
-    (r) => getActualStatus(r) === "paid"
-  ).length;
-  const pendingCount = reservations.filter((r) => {
-    const status = getActualStatus(r);
-    return status !== "assigned" && status !== "paid";
-  }).length;
+ 
+  const totalCount = reservations.length;
 
   return (
     <div
@@ -86,30 +50,27 @@ export default function CalendarDay({
       <div className="space-y-1">
         {reservations.length > 0 ? (
           <div className="space-y-1">
-            <div className="text-xs font-medium text-secondary-800 bg-secondary-100 px-2 py-1 rounded">
-              {reservations.length} Reservasi
+            <div className="text-xs font-medium text-secondary-800 bg-secondary-100 px-2 py-1 rounded text-center">
+              {totalCount} Reservasi
             </div>
 
-            {assignedCount > 0 && (
-              <div className="text-xs text-success-800 bg-success-100 px-2 py-1 rounded flex items-center">
-                <span className="w-2 h-2 bg-success-500 rounded-full mr-1"></span>
-                {assignedCount} Assigned
-              </div>
-            )}
-
-            {paidCount > 0 && (
-              <div className="text-xs text-blue-800 bg-blue-100 px-2 py-1 rounded flex items-center">
-                <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
-                {paidCount} Paid
-              </div>
-            )}
-
-            {pendingCount > 0 && (
-              <div className="text-xs text-warning-800 bg-warning-100 px-2 py-1 rounded flex items-center">
-                <span className="w-2 h-2 bg-warning-500 rounded-full mr-1"></span>
-                {pendingCount} Pending
-              </div>
-            )}
+            {/* Tambahkan ikon besar di bawah jumlah untuk mengisi ruang */}
+            <div className="flex items-center justify-center mt-2">
+              <svg
+                className="w-12 h-12 text-secondary-300"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="4" width="18" height="6" rx="2" />
+                <rect x="3" y="14" width="18" height="6" rx="2" />
+                <path d="M8 7h.01M8 17h.01" />
+              </svg>
+            </div>
           </div>
         ) : (
           <div className="text-xs text-secondary-400 text-center py-4">

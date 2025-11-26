@@ -5,27 +5,36 @@ export default function ReservationCard({ reservation, assignment, onClick }) {
 
   // Determine actual status based on payment status
   const getActualStatus = () => {
+    // Check for failed or canceled status from reservation.status first
+    if (reservation.status === "failed" || reservation.status === "canceled") {
+      return reservation.status;
+    }
+
     // If has assignment with staff, return "assigned"
     if (hasStaffAssigned) return "assigned";
 
-    // Check payment status from payments table
+    // Check payment status - prioritize failed states
     if (reservation.payments && reservation.payments.length > 0) {
       const payment = reservation.payments[0];
-      if (
-        payment.transaction_status === "settlement" ||
-        payment.transaction_status === "capture"
-      ) {
-        return "paid";
-      }
-      if (payment.transaction_status === "pending") {
-        return "pending";
-      }
+
+      // Check for failed payment status first
       if (
         payment.transaction_status === "deny" ||
         payment.transaction_status === "cancel" ||
         payment.transaction_status === "expire"
       ) {
         return "failed";
+      }
+
+      if (
+        payment.transaction_status === "settlement" ||
+        payment.transaction_status === "capture"
+      ) {
+        return "paid";
+      }
+
+      if (payment.transaction_status === "pending") {
+        return "pending";
       }
     }
 
@@ -57,6 +66,8 @@ export default function ReservationCard({ reservation, assignment, onClick }) {
                   ? "bg-success-100 text-success-800"
                   : actualStatus === "paid"
                   ? "bg-blue-100 text-blue-800"
+                  : actualStatus === "failed" || actualStatus === "canceled"
+                  ? "bg-danger-100 text-danger-800"
                   : "bg-warning-100 text-warning-800"
               }`}
             >
@@ -64,6 +75,10 @@ export default function ReservationCard({ reservation, assignment, onClick }) {
                 ? "Assigned"
                 : actualStatus === "paid"
                 ? "Paid - Siap Assign"
+                : actualStatus === "failed"
+                ? "Failed"
+                : actualStatus === "canceled"
+                ? "Canceled"
                 : "Belum Bayar"}
             </span>
           </div>
@@ -75,6 +90,10 @@ export default function ReservationCard({ reservation, assignment, onClick }) {
               Status:{" "}
               {actualStatus === "pending"
                 ? "Menunggu pembayaran"
+                : actualStatus === "failed"
+                ? "Pembayaran gagal"
+                : actualStatus === "canceled"
+                ? "Dibatalkan"
                 : "Tidak dapat di-assign"}
             </p>
           )}

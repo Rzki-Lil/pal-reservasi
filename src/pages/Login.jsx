@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Alert from "../components/Alert";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
@@ -15,6 +16,8 @@ export default function Login() {
   const [forgotError, setForgotError] = useState("");
   const { user, signIn, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  const [alert, setAlert] = useState({ message: "", type: "success" });
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -48,20 +51,38 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setAlert({ message: "", type: "success" });
 
-    const { error } = await signIn(phone, password);
+    try {
+      const res = await fetch(
+        "https://settled-modern-stinkbug.ngrok-free.app/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({ phone, password }),
+        }
+      );
 
-    if (error) {
-      if (error.message.includes("dinonaktifkan")) {
-        setError(
-          "Akun Anda telah dinonaktifkan. Silakan daftar ulang menggunakan nomor HP yang sama untuk mengaktifkan kembali akun Anda."
-        );
+      const data = await res.json();
+
+      if (res.ok) {
+        await signIn(data.token, data.user);
+        setAlert({ message: "Berhasil masuk! Mengalihkan ke dashboard...", type: "success" });
+        setTimeout(() => {
+          if (data.user.role === "admin") {
+            navigate("/admin");
+          } else {
+            navigate("/dashboard");
+          }
+        }, 1000);
       } else {
-        setError(error.message);
+        setAlert({ message: data.message || "Gagal masuk! Periksa nomor HP dan password Anda.", type: "error" });
       }
-    } else {
-      navigate("/dashboard");
+    } catch (error) {
+      setAlert({ message: "Terjadi kesalahan. Coba lagi.", type: "error" });
     }
 
     setLoading(false);
@@ -70,7 +91,7 @@ export default function Login() {
   const handleForgotSubmit = async (e) => {
     e.preventDefault();
     setForgotLoading(true);
-    setForgotError("");
+    setAlert({ message: "", type: "success" });
     try {
       const res = await fetch(
         "https://settled-modern-stinkbug.ngrok-free.app/api/otp/forgot-password",
@@ -85,16 +106,16 @@ export default function Login() {
       );
       const data = await res.json();
       if (!res.ok) {
-        setForgotError(data.message || "Gagal mengirim OTP.");
+        setAlert({ message: data.message || "Gagal mengirim OTP.", type: "error" });
         setForgotLoading(false);
         return;
       }
       setShowForgot(false);
       setForgotPhone("");
-      setForgotError("");
+      setAlert({ message: "Kode OTP berhasil dikirim ke WhatsApp Anda.", type: "success" });
       navigate(`/verify-otp?phone=${encodeURIComponent(forgotPhone)}&forgot=1`);
     } catch {
-      setForgotError("Gagal menghubungi server.");
+      setAlert({ message: "Gagal menghubungi server.", type: "error" });
     }
     setForgotLoading(false);
   };
@@ -110,6 +131,11 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col justify-center bg-gray-50 py-12 sm:px-6 lg:px-8">
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "success" })}
+      />
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link to="/" className="flex justify-center">
           <h1 className="text-3xl font-bold text-blue-600">UPTD PAL</h1>
@@ -131,32 +157,6 @@ export default function Login() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-md bg-red-50 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-red-400"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">
-                      Terjadi kesalahan
-                    </h3>
-                    <div className="mt-2 text-sm text-red-700">{error}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div>
               <label
                 htmlFor="phone"
@@ -315,11 +315,6 @@ export default function Login() {
               Reset Password
             </h3>
             <form onSubmit={handleForgotSubmit} className="space-y-4">
-              {forgotError && (
-                <div className="bg-danger-50 border border-danger-200 rounded-lg p-3 text-danger-700 text-sm">
-                  {forgotError}
-                </div>
-              )}
               <div>
                 <label className="block text-sm font-medium text-secondary-700 mb-1">
                   Masukkan nomor HP terdaftar

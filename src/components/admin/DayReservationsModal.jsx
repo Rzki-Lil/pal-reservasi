@@ -6,11 +6,16 @@ export default function DayReservationsModal({
   reservations,
   onClose,
   onReservationClick,
+  onComplete,
 }) {
   if (!isOpen) return null;
 
   const getActualStatus = (reservation) => {
-    if (reservation.status === "failed" || reservation.status === "canceled") {
+    if (
+      reservation.status === "failed" ||
+      reservation.status === "canceled" ||
+      reservation.status === "completed"
+    ) {
       return reservation.status;
     }
 
@@ -48,18 +53,14 @@ export default function DayReservationsModal({
     return reservation.status;
   };
 
-  // compute summary counts
+  const pendingCount = reservations.filter((r) => getActualStatus(r) === "pending")
+    .length;
+  const paidCount = reservations.filter((r) => getActualStatus(r) === "paid").length;
   const assignedCount = reservations.filter(
     (r) => getActualStatus(r) === "assigned"
   ).length;
-  const paidCount = reservations.filter((r) => getActualStatus(r) === "paid")
-    .length;
-  const failedCount = reservations.filter((r) => {
-    const s = getActualStatus(r);
-    return s === "failed" || s === "canceled";
-  }).length;
-  const pendingCount = reservations.filter(
-    (r) => getActualStatus(r) === "pending"
+  const completedCount = reservations.filter(
+    (r) => getActualStatus(r) === "completed"
   ).length;
 
   return (
@@ -109,102 +110,110 @@ export default function DayReservationsModal({
             </div>
           ) : (
             <div className="space-y-3">
-              {reservations.map((reservation) => (
-                <div
-                  key={reservation.id}
-                  onClick={() => {
-                    onReservationClick(reservation);
-                    onClose();
-                  }}
-                  className="p-4 rounded-lg border border-secondary-200 hover:border-primary-300 hover:bg-primary-50 cursor-pointer transition-all"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="font-medium text-secondary-900 text-sm">
-                          {reservation.schedule_slot}
-                        </span>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${(() => {
-                            const actualStatus = getActualStatus(reservation);
-                            if (actualStatus === "assigned") {
-                              return "bg-success-100 text-success-800";
-                            } else if (actualStatus === "paid") {
-                              return "bg-blue-100 text-blue-800";
-                            } else if (
-                              actualStatus === "failed" ||
-                              actualStatus === "canceled"
-                            ) {
-                              return "bg-danger-100 text-danger-800";
-                            } else {
-                              return "bg-warning-100 text-warning-800";
-                            }
-                          })()}`}
-                        >
-                          {(() => {
-                            const actualStatus = getActualStatus(reservation);
-                            if (actualStatus === "assigned") return "Assigned";
-                            if (actualStatus === "paid")
-                              return "Paid - Siap Assign";
-                            if (actualStatus === "failed") return "Failed";
-                            if (actualStatus === "canceled") return "Canceled";
-                            return "Belum Bayar";
-                          })()}
-                        </span>
-                      </div>
-                      <div className="text-xs text-secondary-600 space-y-1">
-                        <p>
-                          <span className="font-medium">Volume:</span>{" "}
-                          {reservation.volume} m³
-                        </p>
-                        {reservation.services?.name && (
-                          <p>
-                            <span className="font-medium">Layanan:</span>{" "}
-                            {reservation.services.name}
-                          </p>
-                        )}
-                        {reservation.user_locations && (
-                          <p>
-                            <span className="font-medium">Lokasi:</span>{" "}
-                            {reservation.user_locations.label}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-xs text-secondary-500">
-                      {(() => {
-                        const actualStatus = getActualStatus(reservation);
-                        if (actualStatus === "assigned") {
-                          return (
+              {reservations.map((reservation) => {
+                const actualStatus = getActualStatus(reservation);
+                return (
+                  <div
+                    key={reservation.id}
+                    className="p-4 rounded-lg border border-secondary-200 hover:border-primary-300 hover:bg-primary-50 transition-all"
+                  >
+                    <div
+                      onClick={() => {
+                        onReservationClick(reservation);
+                        onClose();
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="font-medium text-secondary-900 text-sm">
+                              {reservation.schedule_slot}
+                            </span>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${(() => {
+                                if (actualStatus === "assigned") {
+                                  return "bg-success-100 text-success-800";
+                                } else if (actualStatus === "completed") {
+                                  return "bg-success-100 text-success-800";
+                                } else if (actualStatus === "paid") {
+                                  return "bg-blue-100 text-blue-800";
+                                } else if (
+                                  actualStatus === "failed" ||
+                                  actualStatus === "canceled"
+                                ) {
+                                  return "bg-danger-100 text-danger-800";
+                                } else {
+                                  return "bg-warning-100 text-warning-800";
+                                }
+                              })()}`}
+                            >
+                              {(() => {
+                                if (actualStatus === "assigned") return "Assigned";
+                                if (actualStatus === "completed") return "Selesai";
+                                if (actualStatus === "paid") return "Paid - Siap Assign";
+                                if (actualStatus === "failed") return "Failed";
+                                if (actualStatus === "canceled") return "Canceled";
+                                return "Belum Bayar";
+                              })()}
+                            </span>
+                          </div>
+                          <div className="text-xs text-secondary-600 space-y-1">
+                            <p>
+                              <span className="font-medium">Volume:</span>{" "}
+                              {reservation.volume} m³
+                            </p>
+                            {reservation.services?.name && (
+                              <p>
+                                <span className="font-medium">Layanan:</span>{" "}
+                                {reservation.services.name}
+                              </p>
+                            )}
+                            {reservation.user_locations && (
+                              <p>
+                                <span className="font-medium">Lokasi:</span>{" "}
+                                {reservation.user_locations.label}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-xs text-secondary-500">
+                          {actualStatus === "assigned" && (
                             <div className="text-success-600 font-medium">
                               ✓ Staff Assigned
                             </div>
-                          );
-                        } else if (actualStatus === "paid") {
-                          return (
-                            <div className="text-blue-600 font-medium">
-                              💰 Siap untuk di-assign
-                            </div>
-                          );
-                        } else if (
-                          actualStatus === "failed" ||
-                          actualStatus === "canceled"
-                        ) {
-                          return (
+                          )}
+                          {(actualStatus === "failed" || actualStatus === "canceled") && (
                             <div className="text-danger-600 font-medium">
-                              ✗{" "}
-                              {actualStatus === "failed"
-                                ? "Gagal"
-                                : "Dibatalkan"}
+                              ✗ {actualStatus === "failed" ? "Gagal" : "Dibatalkan"}
                             </div>
-                          );
-                        }
-                        return null;
-                      })()}
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions row - separate from clickable area to avoid accidental close */}
+                    <div className="mt-3 flex justify-end space-x-2">
+                      {actualStatus === "assigned" && onComplete && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            // call parent's onComplete handler
+                            try {
+                              await onComplete(reservation.id);
+                            } catch (err) {
+                              console.error("onComplete error:", err);
+                            }
+                          }}
+                          className="px-3 py-1 rounded-lg bg-success-100 text-success-800 border border-success-200 hover:bg-success-200 text-sm"
+                        >
+                          Tandai Selesai
+                        </button>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -216,20 +225,20 @@ export default function DayReservationsModal({
             {reservations.length > 0 && (
               <>
                 {" • "}
-                <span className="text-success-600 font-medium">
-                  {assignedCount} assigned
+                <span className="text-warning-600 font-medium">
+                  {pendingCount} pending
                 </span>
                 {" • "}
                 <span className="text-blue-600 font-medium">
                   {paidCount} paid
                 </span>
                 {" • "}
-                <span className="text-danger-600 font-medium">
-                  {failedCount} failed
+                <span className="text-success-600 font-medium">
+                  {assignedCount} assigned
                 </span>
                 {" • "}
-                <span className="text-warning-600 font-medium">
-                  {pendingCount} pending
+                <span className="text-success-800 font-medium">
+                  {completedCount} completed
                 </span>
               </>
             )}

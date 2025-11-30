@@ -1,23 +1,21 @@
 export default function ReservationCard({ reservation, assignment, onClick }) {
-  // Check if assignment has actual staff assigned
   const hasStaffAssigned =
     assignment && assignment.staff_ids && assignment.staff_ids.length > 0;
 
-  // Determine actual status based on payment status
   const getActualStatus = () => {
-    // Check for failed or canceled status from reservation.status first
-    if (reservation.status === "failed" || reservation.status === "canceled") {
+    if (
+      reservation.status === "failed" ||
+      reservation.status === "canceled" ||
+      reservation.status === "completed"
+    ) {
       return reservation.status;
     }
 
-    // If has assignment with staff, return "assigned"
     if (hasStaffAssigned) return "assigned";
 
-    // Check payment status - prioritize failed states
     if (reservation.payments && reservation.payments.length > 0) {
       const payment = reservation.payments[0];
 
-      // Check for failed payment status first
       if (
         payment.transaction_status === "deny" ||
         payment.transaction_status === "cancel" ||
@@ -38,7 +36,6 @@ export default function ReservationCard({ reservation, assignment, onClick }) {
       }
     }
 
-    // Fallback to original status
     return reservation.status;
   };
 
@@ -64,6 +61,8 @@ export default function ReservationCard({ reservation, assignment, onClick }) {
               className={`px-2 py-1 rounded-full text-xs font-medium ${
                 hasStaffAssigned
                   ? "bg-success-100 text-success-800"
+                  : actualStatus === "completed"
+                  ? "bg-success-100 text-success-800"
                   : actualStatus === "paid"
                   ? "bg-blue-100 text-blue-800"
                   : actualStatus === "failed" || actualStatus === "canceled"
@@ -73,6 +72,8 @@ export default function ReservationCard({ reservation, assignment, onClick }) {
             >
               {hasStaffAssigned
                 ? "Assigned"
+                : actualStatus === "completed"
+                ? "Selesai"
                 : actualStatus === "paid"
                 ? "Paid - Siap Assign"
                 : actualStatus === "failed"
@@ -90,6 +91,8 @@ export default function ReservationCard({ reservation, assignment, onClick }) {
               Status:{" "}
               {actualStatus === "pending"
                 ? "Menunggu pembayaran"
+                : actualStatus === "completed"
+                ? "Reservasi selesai"
                 : actualStatus === "failed"
                 ? "Pembayaran gagal"
                 : actualStatus === "canceled"

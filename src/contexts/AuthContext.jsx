@@ -33,13 +33,11 @@ export const AuthProvider = ({ children }) => {
             if (!res.ok) throw new Error("Token tidak valid");
             const data = await res.json();
 
-            // Update user data from backend
             setToken(savedToken);
             setUser(data);
             localStorage.setItem("authUser", JSON.stringify(data));
           })
           .catch(() => {
-            // Token invalid, clear storage
             localStorage.removeItem("authToken");
             localStorage.removeItem("authUser");
             setToken(null);
@@ -47,7 +45,6 @@ export const AuthProvider = ({ children }) => {
           })
           .finally(() => setLoading(false));
       } catch (error) {
-        // Invalid saved user data
         localStorage.removeItem("authToken");
         localStorage.removeItem("authUser");
         setToken(null);
@@ -59,7 +56,15 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const signIn = async (phone, password) => {
+  const signIn = async (tokenOrPhone, userOrPassword) => {
+    if (typeof tokenOrPhone === "string" && typeof userOrPassword === "object") {
+      setUser(userOrPassword);
+      setToken(tokenOrPhone);
+      localStorage.setItem("authToken", tokenOrPhone);
+      localStorage.setItem("authUser", JSON.stringify(userOrPassword));
+      return { user: userOrPassword, token: tokenOrPhone };
+    }
+
     try {
       const response = await fetch(
         "https://settled-modern-stinkbug.ngrok-free.app/api/auth/login",
@@ -69,7 +74,7 @@ export const AuthProvider = ({ children }) => {
             "Content-Type": "application/json",
             "ngrok-skip-browser-warning": "true",
           },
-          body: JSON.stringify({ phone, password }),
+          body: JSON.stringify({ phone: tokenOrPhone, password: userOrPassword }),
         }
       );
 

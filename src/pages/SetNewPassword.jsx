@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PasswordRequirements from "../components/PasswordRequirements";
 import { validatePassword } from "../utils/passwordUtils";
+import Alert from "../components/Alert";
 
 export default function SetNewPassword() {
   const [searchParams] = useSearchParams();
@@ -11,6 +12,7 @@ export default function SetNewPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [alert, setAlert] = useState({ message: "", type: "success" });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
@@ -21,12 +23,15 @@ export default function SetNewPassword() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setAlert({ message: "", type: "success" });
     if (!passwordValidation.isValid) {
       setError("Password tidak memenuhi syarat.");
+      setAlert({ message: "Password tidak memenuhi syarat.", type: "error" });
       return;
     }
     if (password !== confirm) {
       setError("Password tidak sama.");
+      setAlert({ message: "Password tidak sama.", type: "error" });
       return;
     }
     setLoading(true);
@@ -45,21 +50,29 @@ export default function SetNewPassword() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.message || "Gagal reset password.");
+        setAlert({ message: data.message || "Gagal reset password.", type: "error" });
         setLoading(false);
         return;
       }
       setSuccess("Password berhasil diubah. Silakan login.");
+      setAlert({ message: "Password Anda berhasil diubah! Silakan masuk.", type: "success" });
       setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch {
       setError("Gagal menghubungi server.");
+      setAlert({ message: "Gagal menghubungi server.", type: "error" });
     }
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen flex flex-col justify-center bg-gray-50 py-12 sm:px-6 lg:px-8">
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "success" })}
+      />
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-2xl font-bold text-gray-900">
           Buat Password Baru
@@ -71,16 +84,6 @@ export default function SetNewPassword() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-md bg-red-50 p-4 text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="rounded-md bg-green-50 p-4 text-green-700 text-sm">
-                {success}
-              </div>
-            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password Baru

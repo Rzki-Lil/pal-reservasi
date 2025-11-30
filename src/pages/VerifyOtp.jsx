@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
+import Alert from "../components/Alert";
 
 export default function VerifyOtp() {
   const [searchParams] = useSearchParams();
@@ -20,6 +21,7 @@ export default function VerifyOtp() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [alert, setAlert] = useState({ message: "", type: "success" });
   const navigate = useNavigate();
   const inputsRef = useRef([]);
 
@@ -65,11 +67,14 @@ export default function VerifyOtp() {
     const codeStr = code.join("");
     if (codeStr.length !== 6) {
       setError("Kode OTP harus 6 digit.");
+      setAlert({ message: "Kode OTP harus 6 digit.", type: "error" });
       return;
     }
     setLoading(true);
     setError("");
     setSuccess("");
+    setAlert({ message: "", type: "success" });
+
     try {
       const verifyUrl =
         "https://settled-modern-stinkbug.ngrok-free.app/api/otp/verify";
@@ -82,6 +87,7 @@ export default function VerifyOtp() {
         body: JSON.stringify({ phone, code: codeStr }),
       });
       const data = await res.json();
+
       if (res.ok) {
         if (changePhone) {
           const changeRes = await fetch(
@@ -99,10 +105,15 @@ export default function VerifyOtp() {
           const changeData = await changeRes.json();
           if (!changeRes.ok) {
             setError(changeData.message || "Gagal mengganti nomor HP.");
+            setAlert({
+              message: changeData.message || "Gagal mengganti nomor HP.",
+              type: "error",
+            });
             setLoading(false);
             return;
           }
           setSuccess("Nomor HP berhasil diganti!");
+          setAlert({ message: "Nomor HP Anda berhasil diubah!", type: "success" });
           setUser((prev) => ({ ...prev, phone }));
           setTimeout(() => {
             navigate("/profile");
@@ -112,6 +123,7 @@ export default function VerifyOtp() {
         }
         if (forgot) {
           setSuccess("OTP terverifikasi. Silakan buat password baru.");
+          setAlert({ message: "Kode OTP berhasil diverifikasi!", type: "success" });
           setTimeout(() => {
             navigate(`/set-new-password?phone=${encodeURIComponent(phone)}`);
           }, 1500);
@@ -137,16 +149,17 @@ export default function VerifyOtp() {
           const regData = await regRes.json();
           if (!regRes.ok) {
             setError(regData.message || "Gagal mendaftar.");
+            setAlert({ message: regData.message || "Gagal mendaftar.", type: "error" });
             setLoading(false);
             return;
           }
 
           if (regData.message?.includes("diaktifkan kembali")) {
-            setSuccess(
-              "Akun berhasil diaktifkan kembali! Silakan login."
-            );
+            setSuccess("Akun berhasil diaktifkan kembali! Silakan login.");
+            setAlert({ message: "Akun Anda berhasil diaktifkan kembali!", type: "success" });
           } else {
             setSuccess("Registrasi berhasil! Silakan login.");
+            setAlert({ message: "Pendaftaran berhasil! Silakan masuk.", type: "success" });
           }
 
           setTimeout(() => {
@@ -208,6 +221,7 @@ export default function VerifyOtp() {
                 .eq("id", userId);
             }
             setSuccess("Verifikasi berhasil! Silakan login.");
+            setAlert({ message: "Verifikasi berhasil! Silakan masuk ke akun Anda.", type: "success" });
             setTimeout(() => {
               navigate("/login");
             }, 2000);
@@ -215,15 +229,22 @@ export default function VerifyOtp() {
         }
       } else {
         setError(data.message || "Kode OTP salah atau kedaluwarsa.");
+        setAlert({ message: data.message || "Kode OTP salah atau kedaluwarsa.", type: "error" });
       }
     } catch {
       setError("Gagal menghubungi server.");
+      setAlert({ message: "Gagal menghubungi server.", type: "error" });
     }
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen flex flex-col justify-center bg-gray-50 py-12 sm:px-6 lg:px-8">
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "success" })}
+      />
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link to="/" className="flex justify-center">
           <h1 className="text-3xl font-bold text-blue-600">UPTD PAL</h1>
@@ -241,16 +262,6 @@ export default function VerifyOtp() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-md bg-red-50 p-4 text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="rounded-md bg-green-50 p-4 text-green-700 text-sm">
-                {success}
-              </div>
-            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Kode OTP

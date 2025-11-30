@@ -362,19 +362,19 @@ export default function Profile() {
       if (res.ok) {
         setNotifPrefs(newPrefs);
         setAlert({
-          message: "Preferensi notifikasi berhasil diperbarui!",
+          message: "Pengaturan notifikasi berhasil diperbarui!",
           type: "success",
         });
       } else {
         const error = await res.json();
         setAlert({
-          message: error.message || "Gagal memperbarui preferensi notifikasi",
+          message: error.message || "Gagal memperbarui pengaturan notifikasi!",
           type: "error",
         });
       }
     } catch (error) {
       setAlert({
-        message: "Gagal memperbarui preferensi notifikasi",
+        message: "Gagal memperbarui pengaturan notifikasi!",
         type: "error",
       });
     }
@@ -407,8 +407,7 @@ export default function Profile() {
         setDeleteError(data.message || "Gagal menghapus akun.");
       } else {
         setAlert({
-          message:
-            "Akun berhasil dihapus. Anda akan dialihkan ke halaman utama.",
+          message: "Akun Anda berhasil dihapus. Mengalihkan ke halaman utama...",
           type: "success",
         });
 

@@ -10,8 +10,8 @@ export default function AssignmentModal({
   isOpen,
 }) {
   const [selectedStaffs, setSelectedStaffs] = useState([""]);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Update selectedStaffs when currentAssignment changes
   useEffect(() => {
     if (
       currentAssignment?.staff_ids &&
@@ -23,11 +23,23 @@ export default function AssignmentModal({
     }
   }, [currentAssignment]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validStaffs = selectedStaffs.filter((id) => id !== "");
-    if (validStaffs.length > 0) {
-      onAssign(reservation.id, validStaffs);
+    if (validStaffs.length === 0) return;
+    // convert to numbers if needed
+    const staffIds = validStaffs.map((id) =>
+      typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id
+    );
+    try {
+      setSubmitting(true);
+      const ok = await onAssign(reservation.id, staffIds);
+      // if parent returned success, close modal locally
+      if (ok) {
+        onClose();
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -171,13 +183,17 @@ export default function AssignmentModal({
               </button>
               <button
                 type="submit"
-                disabled={selectedStaffs.filter((id) => id !== "").length === 0}
+                disabled={
+                  submitting || selectedStaffs.filter((id) => id !== "").length === 0
+                }
                 className="btn-primary"
               >
-                {currentAssignment &&
-                currentAssignment.staff_ids &&
-                currentAssignment.staff_ids.length > 0
-                  ? "Update Assignment"
+                {submitting
+                  ? "Menugaskan..."
+                  : currentAssignment &&
+                    currentAssignment.staff_ids &&
+                    currentAssignment.staff_ids.length > 0
+                  ? "Perbarui Penugasan"
                   : "Assign"}
               </button>
             </div>

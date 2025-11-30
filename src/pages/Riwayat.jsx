@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
+import Alert from "../components/Alert";
 
 export default function Riwayat() {
   const { user } = useAuth();
@@ -10,6 +11,7 @@ export default function Riwayat() {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [alert, setAlert] = useState({ message: "", type: "success" });
 
   useEffect(() => {
     fetchReservations();
@@ -48,8 +50,9 @@ export default function Riwayat() {
       pending: "bg-warning-100 text-warning-800 border-warning-200",
       paid: "bg-success-100 text-success-800 border-success-200",
       assigned: "bg-blue-100 text-blue-800 border-blue-200",
-      failed: "bg-danger-100 text-danger-800 border-danger-200",
+      completed: "bg-success-50 text-success-800 border-success-100",
       canceled: "bg-danger-100 text-danger-800 border-danger-200",
+      // (note: we intentionally do not surface 'failed' in summary UI per request)
     };
     return (
       badges[status] ||
@@ -62,6 +65,7 @@ export default function Riwayat() {
       pending: "Menunggu Pembayaran",
       paid: "Lunas",
       assigned: "Sudah Ditugaskan",
+      completed: "Selesai",
       failed: "Gagal",
       canceled: "Dibatalkan",
     };
@@ -84,7 +88,7 @@ export default function Riwayat() {
         .single();
 
       if (error || !payment?.redirect_url) {
-        alert("Link pembayaran tidak ditemukan");
+        setAlert({ message: "Tautan pembayaran tidak ditemukan!", type: "error" });
         return;
       }
 
@@ -94,13 +98,15 @@ export default function Riwayat() {
       if (window.snap && snapToken) {
         window.snap.pay(snapToken, {
           onSuccess: function () {
-            fetchReservations(); 
+            setAlert({ message: "Pembayaran Anda berhasil diproses!", type: "success" });
+            fetchReservations();
           },
           onPending: function () {
+            setAlert({ message: "Pembayaran Anda sedang diproses...", type: "success" });
             fetchReservations();
           },
           onError: function () {
-            alert("Pembayaran gagal. Silakan coba lagi.");
+            setAlert({ message: "Pembayaran gagal! Silakan coba lagi.", type: "error" });
           },
           onClose: function () {
             fetchReservations();
@@ -111,7 +117,7 @@ export default function Riwayat() {
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Gagal membuka pembayaran");
+      setAlert({ message: "Gagal membuka halaman pembayaran!", type: "error" });
     }
   };
 
@@ -134,6 +140,11 @@ export default function Riwayat() {
   return (
     <div className="min-h-screen bg-secondary-50">
       <Navbar />
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "success" })}
+      />
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -156,8 +167,8 @@ export default function Riwayat() {
                 <option value="all">Semua Status</option>
                 <option value="pending">Menunggu Pembayaran</option>
                 <option value="paid">Lunas</option>
-                <option value="failed">Gagal</option>
-                <option value="canceled">Dibatalkan</option>
+                <option value="assigned">Sudah Ditugaskan</option>
+                <option value="completed">Selesai</option>
               </select>
             </div>
           </div>
@@ -277,88 +288,87 @@ export default function Riwayat() {
                   </div>
                 )}
 
-                {/* Assignment Details - Updated for Staff Only */}
-                {reservation.status === "assigned" &&
-                  reservation.assignments?.length > 0 && (
-                    <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                          />
-                        </svg>
-                        Tim yang Ditugaskan
-                      </h4>
+                {/* Assignment Details - show if there are assignment rows */}
+                {reservation.assignments?.length > 0 && (
+                  <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                      Tim yang Ditugaskan
+                    </h4>
 
-                      {reservation.assignments.map((assignment) => (
-                        <div key={assignment.id} className="space-y-3">
-                          {/* Staff Grid */}
-                          <div>
-                            <div className="text-xs font-medium text-blue-800 mb-2">
-                              Tim Staff (
-                              {assignment.assignment_staffs?.length || 0}{" "}
-                              orang):
-                            </div>
-                            <div className="grid md:grid-cols-2 gap-2">
-                              {assignment.assignment_staffs?.map(
-                                (staffAssignment, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="flex items-center space-x-3 p-3 bg-white rounded-lg"
-                                  >
-                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                      <svg
-                                        className="w-5 h-5 text-blue-600"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                        />
-                                      </svg>
+                    {reservation.assignments.map((assignment) => (
+                      <div key={assignment.id} className="space-y-3">
+                        {/* Staff Grid */}
+                        <div>
+                          <div className="text-xs font-medium text-blue-800 mb-2">
+                            Tim Staff (
+                            {assignment.assignment_staffs?.length || 0}{" "}
+                            orang):
+                          </div>
+                          <div className="grid md:grid-cols-2 gap-2">
+                            {assignment.assignment_staffs?.map(
+                              (staffAssignment, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-center space-x-3 p-3 bg-white rounded-lg"
+                                >
+                                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <svg
+                                      className="w-5 h-5 text-blue-600"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                      />
+                                    </svg>
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-blue-900">
+                                      {staffAssignment.users?.name}
                                     </div>
-                                    <div>
-                                      <div className="font-medium text-blue-900">
-                                        {staffAssignment.users?.name}
-                                      </div>
-                                      <div className="text-xs text-blue-700">
-                                        Staff • {staffAssignment.users?.phone}
-                                      </div>
+                                    <div className="text-xs text-blue-700">
+                                      Staff • {staffAssignment.users?.phone}
                                     </div>
                                   </div>
-                                )
-                              )}
-                            </div>
+                                </div>
+                              )
+                            )}
                           </div>
                         </div>
-                      ))}
-
-                      <div className="text-xs text-blue-600 mt-3 p-2 bg-blue-100 rounded">
-                        <strong>Ditugaskan pada:</strong>{" "}
-                        {new Date(
-                          reservation.assignments[0].assigned_at
-                        ).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
                       </div>
+                    ))}
+
+                    <div className="text-xs text-blue-600 mt-3 p-2 bg-blue-100 rounded">
+                      <strong>Ditugaskan pada:</strong>{" "}
+                      {new Date(
+                        reservation.assignments[0].assigned_at
+                      ).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </div>
-                  )}
+                  </div>
+                )}
 
                 {/* Notes */}
                 {reservation.notes && (

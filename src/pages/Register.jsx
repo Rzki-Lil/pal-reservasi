@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Alert from "../components/Alert";
 import PasswordRequirements from "../components/PasswordRequirements";
 import { validatePassword } from "../utils/passwordUtils";
 
@@ -13,6 +14,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [alert, setAlert] = useState({ message: "", type: "success" });
 
   const navigate = useNavigate();
   const passwordValidation = validatePassword(formData.password);
@@ -20,8 +22,7 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess("");
+    setAlert({ message: "", type: "success" });
 
     try {
       const phoneCheckRes = await fetch(
@@ -39,6 +40,7 @@ export default function Register() {
 
       if (!phoneCheckRes.ok) {
         setError(phoneCheckData.message || "Gagal memeriksa nomor HP.");
+        setAlert({ message: phoneCheckData.message || "Gagal memeriksa nomor HP.", type: "error" });
         setLoading(false);
         return;
       }
@@ -47,6 +49,10 @@ export default function Register() {
         setError(
           "Nomor HP sudah terdaftar. Jika akun Anda dinonaktifkan, Anda dapat mengaktifkannya kembali."
         );
+        setAlert({
+          message: "Nomor HP sudah terdaftar.",
+          type: "error",
+        });
       }
 
       const res = await fetch(
@@ -61,21 +67,23 @@ export default function Register() {
         }
       );
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || "Gagal mengirim OTP.");
-        setLoading(false);
-        return;
+      if (res.ok) {
+        setAlert({ message: "Kode OTP berhasil dikirim ke WhatsApp Anda!", type: "success" });
+        setTimeout(() => {
+          navigate(
+            `/verify-otp?phone=${encodeURIComponent(formData.phone)}` +
+              `&name=${encodeURIComponent(formData.name)}` +
+              `&password=${encodeURIComponent(formData.password)}` +
+              `&register=1`
+          );
+        }, 1000);
+      } else {
+        setAlert({ message: data.message || "Gagal mengirim OTP", type: "error" });
       }
-
-      navigate(
-        `/verify-otp?phone=${encodeURIComponent(formData.phone)}` +
-          `&name=${encodeURIComponent(formData.name)}` +
-          `&password=${encodeURIComponent(formData.password)}` +
-          `&register=1`
-      );
-    } catch {
-      setError("Gagal menghubungi server.");
+    } catch (error) {
+      setAlert({ message: "Terjadi kesalahan. Coba lagi.", type: "error" });
     }
+
     setLoading(false);
   };
 
@@ -101,6 +109,11 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex flex-col justify-center bg-gray-50 py-12 sm:px-6 lg:px-8">
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "success" })}
+      />
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link to="/" className="flex justify-center">
           <h1 className="text-3xl font-bold text-blue-600">UPTD PAL</h1>
@@ -122,16 +135,7 @@ export default function Register() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-md bg-red-50 p-4 text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="rounded-md bg-green-50 p-4 text-green-700 text-sm">
-                {success}
-              </div>
-            )}
+            {/* Pesan error/success sekarang ditampilkan menggunakan komponen Alert di atas */}
             <div>
               <label
                 htmlFor="name"

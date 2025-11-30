@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from "react";
 import {
@@ -10,6 +11,7 @@ import {
   MdExpandMore,
   MdGroup,
   MdSchedule,
+  MdCheckCircle,
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import AssignmentModal from "../components/admin/AssignmentModal";
@@ -52,7 +54,7 @@ export default function AdminDashboard() {
       fetchAllData();
       const interval = setInterval(() => {
         fetchAllData();
-      }, 10000); 
+      }, 60000); // refresh tiap 60 detik
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -195,19 +197,57 @@ export default function AdminDashboard() {
       );
 
       if (res.ok) {
-        await fetchAllData();
-        setAssignModalOpen(false);
-        setSelectedReservation(null);
-        setAlert({ message: "Staff berhasil di-assign!", type: "success" });
+        // jalankan refresh data di background (tidak menunggu)
+        fetchAllData().catch((err) => {
+          console.error("Background fetchAllData failed:", err);
+        });
+        setAlert({ message: "Staff berhasil ditugaskan!", type: "success" });
+        return true;
       } else {
-        setAlert({ message: "Gagal meng-assign staff!", type: "error" });
+        setAlert({ message: "Gagal menugaskan staff!", type: "error" });
+        return false;
       }
     } catch (error) {
       console.error("Failed to assign:", error);
       setAlert({
-        message: "Terjadi kesalahan saat meng-assign staff!",
+        message: "Terjadi kesalahan saat menugaskan staff!",
         type: "error",
       });
+      return false;
+    }
+  };
+
+  // NEW: mark reservation as completed (only admin, reservation must be assigned)
+  const handleCompleteReservation = async (reservationId) => {
+    if (!confirm("Tandai reservasi ini sebagai selesai?")) return false;
+    try {
+      const res = await fetch(
+        `https://settled-modern-stinkbug.ngrok-free.app/api/admin/reservations/${reservationId}/complete`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "ngrok-skip-browser-warning": "true",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        // refresh data in background
+        fetchAllData().catch((err) =>
+          console.error("Background fetchAllData failed:", err)
+        );
+        setAlert({ message: data.message || "Reservasi ditandai selesai!", type: "success" });
+        return true;
+      } else {
+        setAlert({ message: data.message || "Gagal menandai selesai", type: "error" });
+        return false;
+      }
+    } catch (error) {
+      console.error("Failed to complete reservation:", error);
+      setAlert({ message: "Terjadi kesalahan saat menandai selesai", type: "error" });
+      return false;
     }
   };
 
@@ -242,8 +282,12 @@ export default function AdminDashboard() {
   };
 
   const getActualReservationStatus = (reservation) => {
-    // Check for failed or canceled status from reservation.status first
-    if (reservation.status === "failed" || reservation.status === "canceled") {
+    // Treat completed, failed or canceled as final statuses
+    if (
+      reservation.status === "failed" ||
+      reservation.status === "canceled" ||
+      reservation.status === "completed"
+    ) {
       return reservation.status;
     }
 
@@ -278,6 +322,14 @@ export default function AdminDashboard() {
     return reservation.status;
   };
 
+  // totals for new stats cards
+  // count assigned but exclude reservations already completed
+  const totalAssigned = reservations.filter(
+    (r) => r.status !== "completed" && Boolean(getAssignmentForReservation(r.id))
+  ).length;
+  const totalCompleted = reservations.filter((r) => r.status === "completed")
+    .length;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-secondary-50 flex items-center justify-center">
@@ -298,7 +350,7 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <StatsCard
             title="Total Reservasi"
             value={reservations.length}
@@ -309,17 +361,23 @@ export default function AdminDashboard() {
             title="Belum Diassign"
             value={
               reservations.filter(
-                (r) => !assignments.find((a) => a.reservation_id === r.id)
+                (r) => !assignments.find((a) => a.reservation_id === r.id) && r.status !== "completed"
               ).length
             }
             icon={MdSchedule}
             bgColor="from-warning-500 to-warning-600"
           />
           <StatsCard
-            title="Staff Aktif"
-            value={staffList.length}
-            icon={MdGroup}
-            bgColor="from-secondary-500 to-secondary-600"
+            title="Assigned"
+            value={totalAssigned}
+            icon={MdAssignment}
+            bgColor="from-blue-500 to-blue-600"
+          />
+          <StatsCard
+            title="Completed"
+            value={totalCompleted}
+            icon={MdCheckCircle}
+            bgColor="from-success-500 to-success-600"
           />
         </div>
 
@@ -438,6 +496,7 @@ export default function AdminDashboard() {
                             }
                           }}
                           onDayClick={handleDayClick}
+                          onComplete={handleCompleteReservation}
                         />
                       );
                     })}
@@ -474,23 +533,45 @@ export default function AdminDashboard() {
                   <div className="space-y-3">
                     {getTodayReservations()
                       .slice(0, 3)
-                      .map((reservation) => (
-                        <ReservationCard
-                          key={reservation.id}
-                          reservation={reservation}
-                          assignment={getAssignmentForReservation(
-                            reservation.id
-                          )}
-                          onClick={(res) => {
-                            const actualStatus =
-                              getActualReservationStatus(res);
-                            if (actualStatus === "paid") {
-                              setSelectedReservation(res);
-                              setAssignModalOpen(true);
-                            }
-                          }}
-                        />
-                      ))}
+                      .map((reservation) => {
+                        const actualStatus = getActualReservationStatus(reservation);
+                        return (
+                          <div key={reservation.id} className="space-y-2">
+                            <ReservationCard
+                              reservation={reservation}
+                              assignment={getAssignmentForReservation(reservation.id)}
+                              onClick={(res) => {
+                                const as = getActualReservationStatus(res);
+                                if (as === "paid") {
+                                  setSelectedReservation(res);
+                                  setAssignModalOpen(true);
+                                }
+                              }}
+                            />
+                            {/* Show 'Tandai Selesai' only when reservation is assigned */}
+                            {actualStatus === "assigned" && (
+                              <div className="flex justify-end mt-1">
+                                <button
+                                  onClick={async () => {
+                                    const ok = await handleCompleteReservation(reservation.id);
+                                    if (ok) {
+                                      // optional: close assign modal if open for same reservation
+                                      if (selectedReservation?.id === reservation.id) {
+                                        setAssignModalOpen(false);
+                                        setSelectedReservation(null);
+                                      }
+                                    }
+                                  }}
+                                  className="text-sm px-3 py-1 rounded-lg bg-success-100 text-success-800 border border-success-200 hover:bg-success-200"
+                                  title="Tandai reservasi ini selesai"
+                                >
+                                  Tandai Selesai
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
                   {getTodayReservations().length > 3 && (
                     <div className="mt-4 text-center">
@@ -547,22 +628,29 @@ export default function AdminDashboard() {
 
         {/* Day Reservations Modal */}
         <DayReservationsModal
-          isOpen={dayModalOpen}
-          date={selectedModalDate}
-          reservations={selectedDateReservations}
-          onClose={() => {
-            setDayModalOpen(false);
-            setSelectedDateReservations([]);
-            setSelectedModalDate(null);
-          }}
-          onReservationClick={(reservation) => {
-            const actualStatus = getActualReservationStatus(reservation);
-            if (actualStatus === "paid") {
-              setSelectedReservation(reservation);
-              setAssignModalOpen(true);
+           isOpen={dayModalOpen}
+           date={selectedModalDate}
+           reservations={selectedDateReservations}
+           onClose={() => {
+             setDayModalOpen(false);
+             setSelectedDateReservations([]);
+             setSelectedModalDate(null);
+           }}
+           onReservationClick={(reservation) => {
+             const actualStatus = getActualReservationStatus(reservation);
+             if (actualStatus === "paid") {
+               setSelectedReservation(reservation);
+               setAssignModalOpen(true);
+             }
+           }}
+           onComplete={async (reservationId) => {
+            const ok = await handleCompleteReservation(reservationId);
+            if (ok) {
+              // close day modal to show refresh if desired, or keep open and refresh data
+              // we'll refresh data in handleCompleteReservation already
             }
           }}
-        />
+         />
       </div>
     </div>
   );

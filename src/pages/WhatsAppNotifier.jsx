@@ -37,7 +37,7 @@ export default function WhatsAppNotifier() {
   useEffect(() => {
     if (token) {
       fetchData();
-      const interval = setInterval(fetchData, 10000);
+      const interval = setInterval(fetchData, 60000); // refresh tiap 60 detik
       return () => clearInterval(interval);
     }
   }, [token]);
@@ -155,9 +155,9 @@ export default function WhatsAppNotifier() {
         await fetchData();
         setEditingTemplate(null);
         setTemplateForm({ template: "", active: true });
-        showAlert("success", "Template berhasil diupdate!");
+        showAlert("success", "Template berhasil diperbarui!");
       } else {
-        showAlert("error", "Gagal mengupdate template!");
+        showAlert("error", "Gagal memperbarui template!");
       }
     } catch (error) {
       console.error("Failed to update template:", error);
@@ -167,14 +167,14 @@ export default function WhatsAppNotifier() {
 
   const handleSendBroadcast = async () => {
     if (!sendModal.template) {
-      showAlert("error", "Template tidak ditemukan!");
+      showAlert("error", "Template pesan tidak ditemukan!");
       return;
     }
 
     if (users.length === 0) {
       showAlert(
         "error",
-        "Tidak ada user yang mengaktifkan notifikasi information!"
+        "Tidak ada pengguna yang mengaktifkan notifikasi informasi!"
       );
       return;
     }
@@ -182,7 +182,7 @@ export default function WhatsAppNotifier() {
     setSendModal({ show: false, template: null });
     showAlert(
       "success",
-      `Broadcast dimulai untuk ${users.length} user. Proses berjalan di background.`
+      `Broadcast dimulai untuk ${users.length} pengguna. Proses berjalan di latar belakang.`
     );
 
     try {

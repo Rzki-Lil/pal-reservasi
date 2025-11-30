@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { kabupatenBogor } from "../utils/kabupatenBogor";
+import Alert from "../components/Alert";
 
 export default function BuatReservasi() {
   const { user } = useAuth();
@@ -27,6 +28,8 @@ export default function BuatReservasi() {
   const [scheduleSlots, setScheduleSlots] = useState([]);
   const [slotsStatus, setSlotsStatus] = useState({}); 
   const [loadingSlots, setLoadingSlots] = useState(false); 
+
+  const [alert, setAlert] = useState({ message: "", type: "success" });
 
   function detectKabupatenFromAddress(address) {
     if (!address) return false;
@@ -162,6 +165,7 @@ export default function BuatReservasi() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setAlert({ message: "", type: "success" });
 
     try {
       const response = await fetch(
@@ -179,7 +183,7 @@ export default function BuatReservasi() {
             service_date: formData.service_date,
             notes: formData.notes,
             volume: formData.volume,
-            schedule_slot: formData.schedule_slot, 
+            schedule_slot: formData.schedule_slot,
           }),
         }
       );
@@ -187,32 +191,39 @@ export default function BuatReservasi() {
       const data = await response.json();
 
       if (response.ok) {
-
-        const urlParts = data.redirect_url.split("/");
-        const snapToken = urlParts[urlParts.length - 1];
-        if (window.snap && snapToken) {
-          window.snap.pay(snapToken, {
-            onSuccess: function (result) {
-              navigate("/riwayat");
-            },
-            onPending: function (result) {
-              navigate("/riwayat");
-            },
-            onError: function (result) {
-              setError("Pembayaran gagal. Silakan coba lagi.");
-            },
-            onClose: function () {
-              navigate("/riwayat");
-            },
-          });
-        } else {
-          window.location.href = data.redirect_url;
-        }
+        setAlert({ message: "Reservasi berhasil dibuat! Silakan selesaikan pembayaran.", type: "success" });
+        
+        setTimeout(() => {
+          const urlParts = data.redirect_url.split("/");
+          const snapToken = urlParts[urlParts.length - 1];
+          if (window.snap && snapToken) {
+            window.snap.pay(snapToken, {
+              onSuccess: function (result) {
+                setAlert({ message: "Pembayaran Anda berhasil diproses!", type: "success" });
+                setTimeout(() => navigate("/riwayat"), 1500);
+              },
+              onPending: function (result) {
+                setAlert({ message: "Pembayaran Anda sedang diproses...", type: "success" });
+                setTimeout(() => navigate("/riwayat"), 1500);
+              },
+              onError: function (result) {
+                setAlert({ message: "Pembayaran gagal! Silakan coba lagi.", type: "error" });
+              },
+              onClose: function () {
+                navigate("/riwayat");
+              },
+            });
+          } else {
+            window.location.href = data.redirect_url;
+          }
+        }, 1000);
       } else {
         setError(data.error || "Gagal membuat reservasi");
+        setAlert({ message: data.error || "Gagal membuat reservasi", type: "error" });
       }
     } catch (err) {
       setError("Terjadi kesalahan saat membuat reservasi");
+      setAlert({ message: "Terjadi kesalahan saat membuat reservasi", type: "error" });
     }
 
     setLoading(false);
@@ -223,7 +234,11 @@ export default function BuatReservasi() {
   return (
     <div className="min-h-screen bg-secondary-50">
       <Navbar />
-
+      <Alert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ message: "", type: "success" })}
+      />
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">

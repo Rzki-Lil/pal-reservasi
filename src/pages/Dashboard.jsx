@@ -113,18 +113,18 @@ export default function Dashboard() {
         localStorage.setItem(`notif_modal_seen_${user.id}`, "true");
         setShowNotifModal(false);
         setAlert({
-          message: "Preferensi notifikasi berhasil disimpan!",
+          message: "Pengaturan notifikasi berhasil disimpan!",
           type: "success",
         });
       } else {
         setAlert({
-          message: "Gagal menyimpan preferensi notifikasi",
+          message: "Gagal menyimpan pengaturan notifikasi!",
           type: "error",
         });
       }
     } catch (error) {
       setAlert({
-        message: "Terjadi kesalahan saat menyimpan preferensi",
+        message: "Terjadi kesalahan saat menyimpan pengaturan!",
         type: "error",
       });
     } finally {
@@ -215,7 +215,7 @@ export default function Dashboard() {
         .single();
 
       if (error || !payment?.redirect_url) {
-        alert("Link pembayaran tidak ditemukan");
+        setAlert({ message: "Tautan pembayaran tidak ditemukan!", type: "error" });
         return;
       }
 
@@ -225,13 +225,15 @@ export default function Dashboard() {
       if (window.snap && snapToken) {
         window.snap.pay(snapToken, {
           onSuccess: function (result) {
+            setAlert({ message: "Pembayaran Anda berhasil diproses!", type: "success" });
             fetchReservations();
           },
           onPending: function (result) {
+            setAlert({ message: "Pembayaran Anda sedang diproses...", type: "success" });
             fetchReservations();
           },
           onError: function (result) {
-            alert("Pembayaran gagal. Silakan coba lagi.");
+            setAlert({ message: "Pembayaran gagal! Silakan coba lagi.", type: "error" });
           },
           onClose: function () {
             fetchReservations();
@@ -242,7 +244,7 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Gagal membuka pembayaran");
+      setAlert({ message: "Gagal membuka halaman pembayaran!", type: "error" });
     }
   };
 

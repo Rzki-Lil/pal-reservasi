@@ -1,12 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Navbar() {
-  const { user, signOut } = useAuth();
+  const { user, token, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    const fetchRole = async () => {
+      if (token) {
+        try {
+          const res = await fetch(
+            "https://settled-modern-stinkbug.ngrok-free.app/api/auth/me",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "ngrok-skip-browser-warning": "true",
+              },
+            }
+          );
+          const data = await res.json();
+          if (res.ok) {
+            setUserRole(data.role);
+          }
+        } catch (error) {
+          console.error("Error fetching role:", error);
+        }
+      }
+    };
+    fetchRole();
+  }, [token]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -58,7 +84,30 @@ export default function Navbar() {
     },
   ];
 
-  const currentNavItems = user?.role === "admin" ? adminNavItems : navItems;
+  const employeeNavItems = [
+    {
+      label: "Dashboard Petugas",
+      path: "/employee",
+      icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
+    },
+    {
+      label: "Riwayat",
+      path: "/riwayat",
+      icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+    },
+    {
+      label: "Profile",
+      path: "/profile",
+      icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+    },
+  ];
+
+  const currentNavItems =
+    userRole === "admin"
+      ? adminNavItems
+      : userRole === "employee"
+      ? employeeNavItems
+      : navItems;
 
   return (
     <nav className="bg-white shadow-soft border-b border-secondary-200 sticky top-0 z-50">

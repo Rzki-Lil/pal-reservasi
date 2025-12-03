@@ -74,6 +74,8 @@ export default function Login() {
         setTimeout(() => {
           if (data.user.role === "admin") {
             navigate("/admin");
+          } else if (data.user.role === "employee") {
+            navigate("/employee");
           } else {
             navigate("/dashboard");
           }

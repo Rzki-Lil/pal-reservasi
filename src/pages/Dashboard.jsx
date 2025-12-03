@@ -31,7 +31,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const checkRole = async () => {
-      if (!token) return; // ProtectedRoute already handles this
+      if (!token) return; 
 
       try {
         const res = await fetch(
@@ -51,8 +51,19 @@ export default function Dashboard() {
           return;
         }
 
-        if (data.role !== "user") {
+        // Redirect berdasarkan role
+        if (data.role === "admin") {
           navigate("/admin");
+          return;
+        }
+
+        if (data.role === "employee") {
+          navigate("/employee");
+          return;
+        }
+
+        if (data.role !== "user") {
+          navigate("/login");
           return;
         }
 
@@ -145,8 +156,9 @@ export default function Dashboard() {
       .select(
         `
         *,
-        services(name, price, unit),
-        user_locations(label, address),
+        services!reservationss_service_type_id_fkey(name_service, price),
+        user_locations!reservationss_location_id_fkey(label, location),
+        payments!payments_reservation_id_fkey(*),
         assignments(
           id,
           assigned_at,
@@ -166,8 +178,8 @@ export default function Dashboard() {
       const stats = {
         total: data.length,
         pending: data.filter((r) => r.status === "pending").length,
-        paid: data.filter((r) => r.status === "paid").length,
-        failed: data.filter((r) => r.status === "failed").length,
+        confirmed: data.filter((r) => r.status === "confirmed").length,
+        in_progress: data.filter((r) => r.status === "in_progress").length,
       };
       setReservationStats(stats);
     }
@@ -177,10 +189,10 @@ export default function Dashboard() {
   const getStatusBadge = (status) => {
     const badges = {
       pending: "bg-warning-100 text-warning-800 border-warning-200",
-      paid: "bg-success-100 text-success-800 border-success-200",
-      assigned: "bg-blue-100 text-blue-800 border-blue-200",
-      failed: "bg-danger-100 text-danger-800 border-danger-200",
-      canceled: "bg-danger-100 text-danger-800 border-danger-200",
+      confirmed: "bg-success-100 text-success-800 border-success-200",
+      in_progress: "bg-blue-100 text-blue-800 border-blue-200",
+      completed: "bg-success-50 text-success-800 border-success-100",
+      cancelled: "bg-danger-100 text-danger-800 border-danger-200",
     };
     return (
       badges[status] ||
@@ -190,20 +202,33 @@ export default function Dashboard() {
 
   const getStatusText = (status) => {
     const texts = {
-      pending: "Menunggu Pembayaran",
-      paid: "Lunas",
-      assigned: "Sudah Ditugaskan",
-      failed: "Gagal",
-      canceled: "Dibatalkan",
+      pending: "Menunggu Survei",
+      confirmed: "Menunggu Pembayaran",
+      in_progress: "Sedang Dikerjakan",
+      completed: "Selesai",
+      cancelled: "Dibatalkan",
     };
     return texts[status] || status;
   };
 
   const getTotalPrice = (reservation) => {
-    if (!reservation.services?.price || !reservation.volume) return 0;
-    const vol = parseInt(reservation.volume, 10) || 1;
+    if (!reservation.services?.price || !reservation.septic_tank) return 0;
+    const vol = parseInt(reservation.septic_tank, 10) || 1;
     const multiplier = Math.ceil(vol / 3);
     return reservation.services.price * multiplier;
+  };
+
+  // Cek apakah ada payment pending untuk reservasi ini
+  const hasPendingPayment = (reservation) => {
+    if (!reservation.payments) return false;
+    
+    // Handle jika payments adalah array
+    if (Array.isArray(reservation.payments)) {
+      return reservation.payments.some((p) => p.transaction_status === "pending");
+    }
+    
+    // Handle jika payments adalah single object
+    return reservation.payments.transaction_status === "pending";
   };
 
   const handlePayNow = async (reservationId) => {
@@ -458,13 +483,13 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-secondary-600">
-                  Menunggu Pembayaran
+                  Menunggu Survei
                 </p>
-                <p className="text-3xl font-bold text-warning-600">
+                <p className="text-3xl font-bold text-yellow-600">
                   {reservationStats.pending}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-warning-500 to-warning-600 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="none"
@@ -485,12 +510,14 @@ export default function Dashboard() {
           <div className="card p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-secondary-600">Lunas</p>
-                <p className="text-3xl font-bold text-success-600">
-                  {reservationStats.paid}
+                <p className="text-sm font-medium text-secondary-600">
+                  Menunggu Bayar
+                </p>
+                <p className="text-3xl font-bold text-blue-600">
+                  {reservationStats.confirmed}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-success-500 to-success-600 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="none"
@@ -501,7 +528,7 @@ export default function Dashboard() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M5 13l4 4L19 7"
+                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
                   />
                 </svg>
               </div>
@@ -511,12 +538,14 @@ export default function Dashboard() {
           <div className="card p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-secondary-600">Gagal</p>
-                <p className="text-3xl font-bold text-danger-600">
-                  {reservationStats.failed}
+                <p className="text-sm font-medium text-secondary-600">
+                  Sedang Dikerjakan
+                </p>
+                <p className="text-3xl font-bold text-purple-600">
+                  {reservationStats.in_progress}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-danger-500 to-danger-600 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="none"
@@ -527,7 +556,7 @@ export default function Dashboard() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
                   />
                 </svg>
               </div>
@@ -698,7 +727,7 @@ export default function Dashboard() {
 
                       {/* Service and Price */}
                       <div className="font-bold text-base text-secondary-900 flex items-center gap-2 mb-3">
-                        {reservation.services?.name}
+                        {reservation.services?.name_service}
                         <span className="text-primary-700 font-semibold text-sm">
                           - Rp {getTotalPrice(reservation).toLocaleString()}
                         </span>
@@ -709,24 +738,24 @@ export default function Dashboard() {
                         <div>
                           <span className="font-medium">Lokasi:</span>{" "}
                           {reservation.user_locations?.label} -{" "}
-                          {reservation.user_locations?.address}
+                          {reservation.user_locations?.location}
                         </div>
                         <div className="flex gap-4">
                           <span>
                             <span className="font-medium">Tanggal:</span>{" "}
                             {new Date(
-                              reservation.service_date
+                              reservation.scheduled_datetime
                             ).toLocaleDateString("id-ID")}
                           </span>
                           <span>
                             <span className="font-medium">Volume:</span>{" "}
-                            {reservation.volume} m³
+                            {reservation.septic_tank} m³
                           </span>
                         </div>
                       </div>
 
-                      {/* Tombol Bayar untuk status pending */}
-                      {reservation.status === "pending" && (
+                      {/* Tombol Bayar untuk status confirmed dengan payment pending */}
+                      {reservation.status === "confirmed" && hasPendingPayment(reservation) && (
                         <div className="mt-3">
                           <button
                             onClick={() => handlePayNow(reservation.id)}

@@ -4,6 +4,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import AdminDashboard from "./pages/AdminDashboard";
 import BuatReservasi from "./pages/BuatReservasi";
 import Dashboard from "./pages/Dashboard";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
@@ -75,6 +76,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <WhatsAppNotifier />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee"
+            element={
+              <ProtectedRoute>
+                <EmployeeDashboard />
               </ProtectedRoute>
             }
           />

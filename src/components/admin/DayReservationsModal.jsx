@@ -161,12 +161,12 @@ export default function DayReservationsModal({
                           <div className="text-xs text-secondary-600 space-y-1">
                             <p>
                               <span className="font-medium">Volume:</span>{" "}
-                              {reservation.volume} m³
+                              {reservation.septic_tank} m³
                             </p>
-                            {reservation.services?.name && (
+                            {reservation.services?.name_service && (
                               <p>
                                 <span className="font-medium">Layanan:</span>{" "}
-                                {reservation.services.name}
+                                {reservation.services.name_service}
                               </p>
                             )}
                             {reservation.user_locations && (

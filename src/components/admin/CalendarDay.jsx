@@ -88,10 +88,10 @@ export default function CalendarDay({
                   >
                     <div className="truncate pr-2">
                       <div className="font-medium text-secondary-900 truncate">
-                        {r.services?.name || r.schedule_slot}
+                        {r.services?.name_service || r.schedule_slot}
                       </div>
                       <div className="text-secondary-500 text-[11px] truncate">
-                        {r.schedule_slot} • {r.volume} m³
+                        {r.schedule_slot} • {r.septic_tank} m³
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

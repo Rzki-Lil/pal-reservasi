@@ -75,15 +75,15 @@ const MapLocationPicker = ({ value, onChange }) => {
           )
             .then((res) => res.json())
             .then((data) => {
-              const address =
+              const location =
                 data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
               onChange({
-                location: address,
+                location: location,
                 latitude: lat,
                 longitude: lng,
               });
-              setSelected({ lat, lng, label: address });
-              setSearchQuery(address);
+              setSelected({ lat, lng, label: location });
+              setSearchQuery(location);
             })
             .catch(() => {
               onChange({
@@ -146,7 +146,7 @@ const MapLocationPicker = ({ value, onChange }) => {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
           q
-        )}&limit=5&addressdetails=1`
+        )}&limit=5&locationdetails=1`
       );
       const data = await res.json();
       setSearchResults(data);

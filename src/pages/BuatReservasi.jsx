@@ -13,11 +13,10 @@ export default function BuatReservasi() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    service_id: "",
+    service_type_id: "",
     location_id: "",
-    service_date: "",
-    notes: "",
-    volume: 1,
+    scheduled_datetime: "",
+    customer_notes: "",
     schedule_slot: "", 
   });
   const [services, setServices] = useState([]);
@@ -31,9 +30,9 @@ export default function BuatReservasi() {
 
   const [alert, setAlert] = useState({ message: "", type: "success" });
 
-  function detectKabupatenFromAddress(address) {
-    if (!address) return false;
-    const lowerAddr = address.toLowerCase();
+  function detectKabupatenFromAddress(addr) {
+    if (!addr) return false;
+    const lowerAddr = String(addr).toLowerCase();
     return kabupatenBogor.some((kec) => lowerAddr.includes(kec.toLowerCase()));
   }
 
@@ -44,19 +43,19 @@ export default function BuatReservasi() {
   }, []);
 
   useEffect(() => {
-    if (formData.service_date) {
-      fetchSlotsAvailability(formData.service_date);
+    if (formData.scheduled_datetime) {
+      fetchSlotsAvailability(formData.scheduled_datetime);
     }
-  }, [formData.service_date]);
+  }, [formData.scheduled_datetime, scheduleSlots]);
 
   const fetchServices = async () => {
     const { data, error } = await supabase
       .from("services")
       .select("*")
-      .eq("is_active", true);
+      .in("status", ["active", "inactive"]); 
 
     if (!error) {
-      setServices(data);
+      setServices(data || []);
     }
   };
 
@@ -66,8 +65,15 @@ export default function BuatReservasi() {
       .select("*")
       .eq("user_id", user.id);
 
-    if (!error) {
-      setUserLocations(data);
+    if (!error && Array.isArray(data)) {
+      // normalize: ensure "location" exists (fallback to address)
+      const normalized = data.map((loc) => ({
+        ...loc,
+        location: loc.location || loc.address || "",
+      }));
+      setUserLocations(normalized);
+    } else {
+      setUserLocations([]);
     }
   };
 
@@ -89,7 +95,7 @@ export default function BuatReservasi() {
       scheduleSlots.map(async (slot) => {
         try {
           const res = await fetch(
-            `https://settled-modern-stinkbug.ngrok-free.app/api/reservations/availability?service_date=${encodeURIComponent(
+            `https://settled-modern-stinkbug.ngrok-free.app/api/reservations/availability?scheduled_datetime=${encodeURIComponent(
               date
             )}&schedule_slot=${encodeURIComponent(slot)}`,
             {
@@ -112,41 +118,32 @@ export default function BuatReservasi() {
     setLoadingSlots(false); 
   };
 
-  const getTotalPrice = () => {
-    if (!selectedService) return 0;
-    const vol = parseInt(formData.volume, 10) || 1;
-    const multiplier = Math.ceil(vol / 3);
-    return selectedService.price * multiplier;
-  };
-
-  
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "location_id") {
-      const selectedLoc = userLocations.find((loc) => loc.id === value);
+      const selectedLoc = userLocations.find((loc) => String(loc.id) === String(value));
       if (selectedLoc) {
-        const isKabupaten = detectKabupatenFromAddress(selectedLoc.address);
+        const isKabupaten = detectKabupatenFromAddress(selectedLoc.location);
         let autoService = null;
         if (isKabupaten) {
           autoService = services.find((s) =>
-            s.name.toLowerCase().includes("kabu")
+            String(s.name_service || "").toLowerCase().includes("kabupaten")
           );
         } else {
           autoService = services.find((s) =>
-            s.name.toLowerCase().includes("kota")
+            String(s.name_service || "").toLowerCase().includes("kota")
           );
         }
         setFormData((prev) => ({
           ...prev,
           location_id: value,
-          service_id: autoService ? autoService.id : prev.service_id,
+          service_type_id: autoService ? autoService.id : prev.service_type_id,
         }));
         return;
       }
     }
 
-    if (name === "service_date") {
+    if (name === "scheduled_datetime") {
       setFormData({
         ...formData,
         [name]: value,
@@ -178,11 +175,10 @@ export default function BuatReservasi() {
           },
           body: JSON.stringify({
             user_id: user.id,
-            service_id: formData.service_id,
+            service_type_id: formData.service_type_id,
             location_id: formData.location_id,
-            service_date: formData.service_date,
-            notes: formData.notes,
-            volume: formData.volume,
+            scheduled_datetime: formData.scheduled_datetime,
+            customer_notes: formData.customer_notes,
             schedule_slot: formData.schedule_slot,
           }),
         }
@@ -191,32 +187,13 @@ export default function BuatReservasi() {
       const data = await response.json();
 
       if (response.ok) {
-        setAlert({ message: "Reservasi berhasil dibuat! Silakan selesaikan pembayaran.", type: "success" });
+        setAlert({ 
+          message: "Reservasi berhasil dibuat! Menunggu pengecekan dan konfirmasi dari petugas.", 
+          type: "success" });
         
         setTimeout(() => {
-          const urlParts = data.redirect_url.split("/");
-          const snapToken = urlParts[urlParts.length - 1];
-          if (window.snap && snapToken) {
-            window.snap.pay(snapToken, {
-              onSuccess: function (result) {
-                setAlert({ message: "Pembayaran Anda berhasil diproses!", type: "success" });
-                setTimeout(() => navigate("/riwayat"), 1500);
-              },
-              onPending: function (result) {
-                setAlert({ message: "Pembayaran Anda sedang diproses...", type: "success" });
-                setTimeout(() => navigate("/riwayat"), 1500);
-              },
-              onError: function (result) {
-                setAlert({ message: "Pembayaran gagal! Silakan coba lagi.", type: "error" });
-              },
-              onClose: function () {
-                navigate("/riwayat");
-              },
-            });
-          } else {
-            window.location.href = data.redirect_url;
-          }
-        }, 1000);
+          navigate("/riwayat");
+        }, 2000);
       } else {
         setError(data.error || "Gagal membuat reservasi");
         setAlert({ message: data.error || "Gagal membuat reservasi", type: "error" });
@@ -229,7 +206,7 @@ export default function BuatReservasi() {
     setLoading(false);
   };
 
-  const selectedService = services.find((s) => s.id === formData.service_id);
+  const selectedService = services.find((s) => String(s.id) === String(formData.service_type_id));
 
   return (
     <div className="min-h-screen bg-secondary-50">
@@ -296,7 +273,7 @@ export default function BuatReservasi() {
                     <option value="">Pilih Lokasi</option>
                     {userLocations.map((location) => (
                       <option key={location.id} value={location.id}>
-                        {location.label} - {location.address}
+                        {location.label} - {location.location}
                       </option>
                     ))}
                   </select>
@@ -320,13 +297,12 @@ export default function BuatReservasi() {
                   <div className="bg-secondary-100 rounded-lg px-4 py-3 border border-secondary-200">
                     <div className="font-semibold text-secondary-900">
                       {selectedService
-                        ? selectedService.name
+                        ? selectedService.name_service
                         : "Pilih lokasi terlebih dahulu"}
                     </div>
                     {selectedService && (
                       <div className="text-sm text-secondary-600">
-                        Rp {selectedService.price?.toLocaleString()}{" "}
-                        {selectedService.unit}
+                        Rp {selectedService.price?.toLocaleString()} / 3m³
                       </div>
                     )}
                   </div>
@@ -336,24 +312,8 @@ export default function BuatReservasi() {
                   </div>
                   <input
                     type="hidden"
-                    name="service_id"
-                    value={formData.service_id}
-                  />
-                </div>
-
-                {/* Volume */}
-                <div>
-                  <label className="block text-sm font-medium text-secondary-700 mb-2">
-                    Volume (m³) *
-                  </label>
-                  <input
-                    name="volume"
-                    type="number"
-                    min={1}
-                    required
-                    className="input-primary"
-                    value={formData.volume}
-                    onChange={handleChange}
+                    name="service_type_id"
+                    value={formData.service_type_id}
                   />
                 </div>
 
@@ -363,11 +323,11 @@ export default function BuatReservasi() {
                     Tanggal Layanan *
                   </label>
                   <input
-                    name="service_date"
+                    name="scheduled_datetime"
                     type="date"
                     required
                     className="input-primary"
-                    value={formData.service_date}
+                    value={formData.scheduled_datetime}
                     onChange={handleChange}
                     min={new Date().toISOString().split("T")[0]}
                   />
@@ -379,7 +339,7 @@ export default function BuatReservasi() {
                   </label>
 
                   {/* Loading indicator */}
-                  {loadingSlots && formData.service_date && (
+                  {loadingSlots && formData.scheduled_datetime && (
                     <div className="flex items-center justify-center py-8 mb-4">
                       <span className="text-sm text-primary-600">
                         Mengecek ketersediaan slot...
@@ -391,7 +351,7 @@ export default function BuatReservasi() {
                     {scheduleSlots.map((slot) => {
                       const isBooked = slotsStatus[slot] === false;
                       const isDisabled =
-                        isBooked || !formData.service_date || loadingSlots;
+                        isBooked || !formData.scheduled_datetime || loadingSlots;
                       return (
                         <button
                           key={slot}
@@ -414,7 +374,7 @@ export default function BuatReservasi() {
                           title={
                             loadingSlots
                               ? "Sedang mengecek ketersediaan..."
-                              : !formData.service_date
+                              : !formData.scheduled_datetime
                               ? "Isi tanggal layanan terlebih dahulu"
                               : isBooked
                               ? "Sudah di-booking"
@@ -430,15 +390,15 @@ export default function BuatReservasi() {
 
                   {!loadingSlots && !formData.schedule_slot && (
                     <p className="text-xs text-secondary-500 mt-2">
-                      {!formData.service_date
+                      {!formData.scheduled_datetime
                         ? "Pilih tanggal layanan terlebih dahulu untuk melihat slot yang tersedia."
-                        : formData.service_date &&
+                        : formData.scheduled_datetime &&
                           scheduleSlots.length > 0 &&
                           scheduleSlots.every(
                             (slot) => slotsStatus[slot] === false
                           )
                         ? `Maaf, semua slot sudah terisi pada tanggal ${new Date(
-                            formData.service_date
+                            formData.scheduled_datetime
                           ).toLocaleDateString(
                             "id-ID"
                           )}. Silakan pilih tanggal lain.`
@@ -446,11 +406,11 @@ export default function BuatReservasi() {
                     </p>
                   )}
 
-                  {loadingSlots && formData.service_date && (
+                  {loadingSlots && formData.scheduled_datetime && (
                     <p className="text-xs text-primary-600 mt-2">
                       Mohon tunggu, sedang mengecek ketersediaan slot untuk
                       tanggal{" "}
-                      {new Date(formData.service_date).toLocaleDateString(
+                      {new Date(formData.scheduled_datetime).toLocaleDateString(
                         "id-ID"
                       )}
                       ...
@@ -464,11 +424,11 @@ export default function BuatReservasi() {
                     Catatan Tambahan
                   </label>
                   <textarea
-                    name="notes"
+                    name="customer_notes"
                     rows={4}
                     className="input-primary resize-none"
                     placeholder="Catatan khusus untuk reservasi ini (kondisi lokasi, akses jalan, dll)"
-                    value={formData.notes}
+                    value={formData.customer_notes}
                     onChange={handleChange}
                   />
                 </div>
@@ -488,20 +448,18 @@ export default function BuatReservasi() {
                       loading ||
                       loadingSlots ||
                       userLocations.length === 0 ||
-                      !formData.service_id ||
+                      !formData.service_type_id ||
                       !formData.location_id ||
-                      !formData.service_date ||
-                      !formData.volume ||
+                      !formData.scheduled_datetime ||
                       !formData.schedule_slot
                     }
                     className={`btn-primary flex-1 sm:flex-none order-1 sm:order-2 ${
                       loading ||
                       loadingSlots ||
                       userLocations.length === 0 ||
-                      !formData.service_id ||
+                      !formData.service_type_id ||
                       !formData.location_id ||
-                      !formData.service_date ||
-                      !formData.volume ||
+                      !formData.scheduled_datetime ||
                       !formData.schedule_slot
                         ? "bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed hover:bg-gray-300"
                         : ""
@@ -556,7 +514,7 @@ export default function BuatReservasi() {
                         Mengecek Slot...
                       </div>
                     ) : (
-                      "Buat Reservasi & Bayar"
+                      "Buat Reservasi"
                     )}
                   </button>
                 </div>
@@ -567,33 +525,23 @@ export default function BuatReservasi() {
           {/* Summary Card */}
           <div className="lg:col-span-1">
             <div className="card p-8 w-full lg:w-96 mx-auto sticky top-8">
-              {" "}
-              {/* Perlebar card dan padding */}
               <h3 className="text-lg font-semibold text-secondary-900 mb-4">
                 Ringkasan Reservasi
               </h3>
               <div className="space-y-4">
-                {formData.service_id && selectedService && (
+                {formData.service_type_id && selectedService && (
                   <div className="flex justify-between">
                     <span className="text-secondary-600">Layanan:</span>
                     <span className="font-medium text-secondary-900">
-                      {selectedService.name}
+                      {selectedService.name_service}
                     </span>
                   </div>
                 )}
-                {formData.volume && (
-                  <div className="flex justify-between">
-                    <span className="text-secondary-600">Volume:</span>
-                    <span className="font-medium text-secondary-900">
-                      {formData.volume} m³
-                    </span>
-                  </div>
-                )}
-                {formData.service_date && (
+                {formData.scheduled_datetime && (
                   <div className="flex justify-between">
                     <span className="text-secondary-600">Tanggal:</span>
                     <span className="font-medium text-secondary-900">
-                      {new Date(formData.service_date).toLocaleDateString(
+                      {new Date(formData.scheduled_datetime).toLocaleDateString(
                         "id-ID"
                       )}
                     </span>
@@ -608,19 +556,7 @@ export default function BuatReservasi() {
                   </div>
                 )}
 
-                {selectedService && (
-                  <div className="border-t border-secondary-200 pt-4">
-                    <div className="flex justify-between">
-                      <span className="text-lg font-semibold text-secondary-900">
-                        Total Biaya:
-                      </span>
-                      <span className="text-lg font-bold text-primary-600">
-                        Rp {getTotalPrice().toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
+                {/* Info alur baru */}
                 <div className="bg-primary-50 rounded-lg p-4 mt-4">
                   <div className="flex items-start">
                     <svg
@@ -637,55 +573,30 @@ export default function BuatReservasi() {
                       />
                     </svg>
                     <div className="text-sm text-primary-800">
-                      <p className="font-medium mb-1">Informasi Pembayaran:</p>
+                      <p className="font-medium mb-1">Alur Reservasi:</p>
                       <ul className="space-y-1 text-primary-700">
-                        <li>• Pembayaran melalui Midtrans</li>
-                        <li>• Mendukung berbagai metode pembayaran</li>
-                        <li>• Konfirmasi otomatis setelah pembayaran</li>
+                        <li>1. Buat reservasi (tanpa pembayaran)</li>
+                        <li>2. Petugas akan datang untuk survei</li>
+                        <li>3. Petugas input volume tangki septik</li>
+                        <li>4. Anda akan menerima link pembayaran</li>
+                        <li>5. Setelah bayar, pekerjaan dimulai</li>
                       </ul>
                     </div>
                   </div>
                 </div>
 
-                {/* Tambahkan info kartu Midtrans sandbox */}
+                {/* Info harga */}
                 <div className="bg-secondary-50 rounded-lg p-4 mt-4 border border-secondary-200">
                   <div className="mb-2 font-semibold text-secondary-900">
-                    <span>💳 Kartu Percobaan Midtrans (Sandbox)</span>
+                    <span>💰 Estimasi Biaya</span>
                   </div>
-                  <div className="flex flex-col gap-2 text-sm">
-                    <div>
-                      <span className="font-medium">Card Number:</span>{" "}
-                      <span
-                        style={{ userSelect: "all", cursor: "pointer" }}
-                        onClick={() =>
-                          navigator.clipboard.writeText("4811 1111 1111 1114")
-                        }
-                        className="bg-white px-2 py-1 rounded border border-secondary-200 cursor-pointer hover:bg-primary-50"
-                        title="Klik untuk copy"
-                      >
-                        4811 1111 1111 1114
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Expiry Date:</span>{" "}
-                      <span className="bg-white px-2 py-1 rounded border border-secondary-200">
-                        Bebas (misal: 12/25)
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">CVV:</span>{" "}
-                      <span
-                        style={{ userSelect: "all", cursor: "pointer" }}
-                        onClick={() => navigator.clipboard.writeText("123")}
-                        className="bg-white px-2 py-1 rounded border border-secondary-200 cursor-pointer hover:bg-primary-50"
-                        title="Klik untuk copy"
-                      >
-                        123
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-xs text-secondary-500 mt-2">
-                    Klik pada nomor kartu atau CVV untuk copy ke clipboard.
+                  <div className="text-sm text-secondary-700">
+                    <p>Biaya akan dihitung setelah petugas melakukan survei dan mengukur volume tangki septik Anda.</p>
+                    {selectedService && (
+                      <p className="mt-2">
+                        <span className="font-medium">Tarif dasar:</span> Rp {selectedService.price?.toLocaleString()} / 3m³
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

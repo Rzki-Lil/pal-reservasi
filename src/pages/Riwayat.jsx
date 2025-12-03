@@ -25,8 +25,9 @@ export default function Riwayat() {
       .select(
         `
         *,
-        services(name, price, unit),
-        user_locations(label, address),
+        services!reservationss_service_type_id_fkey(name_service, price),
+        user_locations!reservationss_location_id_fkey(label, location),
+        payments!payments_reservation_id_fkey(*),
         assignments(
           id,
           assigned_at,
@@ -47,12 +48,11 @@ export default function Riwayat() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      pending: "bg-warning-100 text-warning-800 border-warning-200",
-      paid: "bg-success-100 text-success-800 border-success-200",
-      assigned: "bg-blue-100 text-blue-800 border-blue-200",
-      completed: "bg-success-50 text-success-800 border-success-100",
-      canceled: "bg-danger-100 text-danger-800 border-danger-200",
-      // (note: we intentionally do not surface 'failed' in summary UI per request)
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      confirmed: "bg-blue-100 text-blue-800 border-blue-200",
+      in_progress: "bg-purple-100 text-purple-800 border-purple-200",
+      completed: "bg-success-100 text-success-800 border-success-200",
+      cancelled: "bg-danger-100 text-danger-800 border-danger-200",
     };
     return (
       badges[status] ||
@@ -62,33 +62,50 @@ export default function Riwayat() {
 
   const getStatusText = (status) => {
     const texts = {
-      pending: "Menunggu Pembayaran",
-      paid: "Lunas",
-      assigned: "Sudah Ditugaskan",
+      pending: "Menunggu Survei",
+      confirmed: "Menunggu Pembayaran",
+      in_progress: "Sedang Dikerjakan",
       completed: "Selesai",
-      failed: "Gagal",
-      canceled: "Dibatalkan",
+      cancelled: "Dibatalkan",
     };
     return texts[status] || status;
   };
 
   const getTotalPrice = (reservation) => {
-    if (!reservation.services?.price || !reservation.volume) return 0;
-    const vol = parseInt(reservation.volume, 10) || 1;
+    if (!reservation.services?.price || !reservation.septic_tank) return 0;
+    const vol = parseInt(reservation.septic_tank, 10) || 1;
     const multiplier = Math.ceil(vol / 3);
     return reservation.services.price * multiplier;
+  };
+
+  // Cek apakah ada payment pending untuk reservasi ini
+  const hasPendingPayment = (reservation) => {
+    if (!reservation.payments) return false;
+    
+    // Handle jika payments adalah array
+    if (Array.isArray(reservation.payments)) {
+      return reservation.payments.some((p) => p.transaction_status === "pending");
+    }
+    
+    // Handle jika payments adalah single object
+    return reservation.payments.transaction_status === "pending";
   };
 
   const handlePayNow = async (reservationId) => {
     try {
       const { data: payment, error } = await supabase
         .from("payments")
-        .select("redirect_url")
+        .select("redirect_url, transaction_status")
         .eq("reservation_id", reservationId)
         .single();
 
       if (error || !payment?.redirect_url) {
         setAlert({ message: "Tautan pembayaran tidak ditemukan!", type: "error" });
+        return;
+      }
+
+      if (payment.transaction_status !== "pending") {
+        setAlert({ message: "Pembayaran sudah diproses atau kadaluarsa", type: "error" });
         return;
       }
 
@@ -165,10 +182,11 @@ export default function Riwayat() {
                 className="input-primary w-full md:w-auto"
               >
                 <option value="all">Semua Status</option>
-                <option value="pending">Menunggu Pembayaran</option>
-                <option value="paid">Lunas</option>
-                <option value="assigned">Sudah Ditugaskan</option>
+                <option value="pending">Menunggu Survei</option>
+                <option value="confirmed">Menunggu Pembayaran</option>
+                <option value="in_progress">Sedang Dikerjakan</option>
                 <option value="completed">Selesai</option>
+                <option value="cancelled">Dibatalkan</option>
               </select>
             </div>
           </div>
@@ -236,36 +254,97 @@ export default function Riwayat() {
                 {/* Service Info */}
                 <div className="mb-4">
                   <h3 className="text-lg font-semibold text-secondary-900">
-                    {reservation.services?.name}
+                    {reservation.services?.name_service}
                   </h3>
                   <div className="flex items-center justify-between mt-2">
                     <div className="text-sm text-secondary-600">
                       <div>
                         📍 {reservation.user_locations?.label} -{" "}
-                        {reservation.user_locations?.address}
+                        {reservation.user_locations?.location}
                       </div>
                       <div className="mt-1">
                         📅{" "}
-                        {new Date(reservation.service_date).toLocaleDateString(
-                          "id-ID"
-                        )}{" "}
-                        • 📦 {reservation.volume} m³
+                        {new Date(
+                          reservation.scheduled_datetime
+                        ).toLocaleDateString("id-ID")}{" "}
+                        • 📦 {reservation.septic_tank} m³
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-primary-600">
-                        Rp {getTotalPrice(reservation).toLocaleString()}
+                    {reservation.septic_tank && (
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-primary-600">
+                          Rp {getTotalPrice(reservation).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-secondary-500">
+                          Total Biaya
+                        </div>
                       </div>
-                      <div className="text-xs text-secondary-500">
-                        {reservation.services?.unit}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Tombol Bayar untuk status pending */}
+                {/* Info untuk status pending */}
                 {reservation.status === "pending" && (
+                  <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div className="flex items-start">
+                      <svg
+                        className="w-5 h-5 text-yellow-600 mt-0.5 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <div className="text-sm text-yellow-800">
+                        <p className="font-medium">Menunggu Survei Petugas</p>
+                        <p className="mt-1">
+                          Reservasi Anda sedang menunggu admin untuk menugaskan
+                          petugas. Petugas akan melakukan survei dan mengukur
+                          volume tangki septik.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tombol Bayar untuk status confirmed dengan payment pending */}
+                {reservation.status === "confirmed" && hasPendingPayment(reservation) && (
                   <div className="mb-4">
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-3">
+                      <div className="flex items-start">
+                        <svg
+                          className="w-5 h-5 text-blue-600 mt-0.5 mr-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <div className="text-sm text-blue-800">
+                          <p className="font-medium">Survei Selesai!</p>
+                          <p className="mt-1">
+                            Volume tangki septik:{" "}
+                            <strong>{reservation.septic_tank} m³</strong>
+                          </p>
+                          <p>
+                            Total biaya:{" "}
+                            <strong>
+                              Rp {getTotalPrice(reservation).toLocaleString()}
+                            </strong>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                     <button
                       onClick={() => handlePayNow(reservation.id)}
                       className="w-full btn-primary text-sm py-2 flex items-center justify-center"
@@ -283,12 +362,41 @@ export default function Riwayat() {
                           d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
                         />
                       </svg>
-                      Bayar Sekarang
+                      Bayar Sekarang - Rp{" "}
+                      {getTotalPrice(reservation).toLocaleString()}
                     </button>
                   </div>
                 )}
 
-                {/* Assignment Details - show if there are assignment rows */}
+                {/* Info untuk status in_progress */}
+                {reservation.status === "in_progress" && (
+                  <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="flex items-start">
+                      <svg
+                        className="w-5 h-5 text-purple-600 mt-0.5 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        />
+                      </svg>
+                      <div className="text-sm text-purple-800">
+                        <p className="font-medium">Pembayaran Berhasil!</p>
+                        <p className="mt-1">
+                          Petugas sedang mengerjakan layanan Anda. Mohon tunggu
+                          hingga selesai.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Assignment Details */}
                 {reservation.assignments?.length > 0 && (
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
@@ -307,73 +415,46 @@ export default function Riwayat() {
                       </svg>
                       Tim yang Ditugaskan
                     </h4>
-
                     {reservation.assignments.map((assignment) => (
                       <div key={assignment.id} className="space-y-3">
-                        {/* Staff Grid */}
-                        <div>
-                          <div className="text-xs font-medium text-blue-800 mb-2">
-                            Tim Staff (
-                            {assignment.assignment_staffs?.length || 0}{" "}
-                            orang):
-                          </div>
-                          <div className="grid md:grid-cols-2 gap-2">
-                            {assignment.assignment_staffs?.map(
-                              (staffAssignment, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-center space-x-3 p-3 bg-white rounded-lg"
+                        <div className="grid md:grid-cols-2 gap-2">
+                          {assignment.assignment_staffs?.map((staffAssignment, idx) => (
+                            <div key={idx} className="flex items-center space-x-3 p-3 bg-white rounded-lg">
+                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <svg
+                                  className="w-5 h-5 text-blue-600"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
                                 >
-                                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <svg
-                                      className="w-5 h-5 text-blue-600"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                      />
-                                    </svg>
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-blue-900">
-                                      {staffAssignment.users?.name}
-                                    </div>
-                                    <div className="text-xs text-blue-700">
-                                      Staff • {staffAssignment.users?.phone}
-                                    </div>
-                                  </div>
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                  />
+                                </svg>
+                              </div>
+                              <div>
+                                <div className="font-medium text-blue-900">
+                                  {staffAssignment.users?.name}
                                 </div>
-                              )
-                            )}
-                          </div>
+                                <div className="text-xs text-blue-700">
+                                  📞 {staffAssignment.users?.phone}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}
-
-                    <div className="text-xs text-blue-600 mt-3 p-2 bg-blue-100 rounded">
-                      <strong>Ditugaskan pada:</strong>{" "}
-                      {new Date(
-                        reservation.assignments[0].assigned_at
-                      ).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
                   </div>
                 )}
 
                 {/* Notes */}
-                {reservation.notes && (
+                {reservation.customer_notes && (
                   <div className="text-sm text-secondary-600 bg-secondary-50 p-3 rounded-lg">
-                    <strong>Catatan:</strong> {reservation.notes}
+                    <strong>Catatan:</strong> {reservation.customer_notes}
                   </div>
                 )}
               </div>
@@ -420,7 +501,7 @@ export default function Riwayat() {
                       Layanan
                     </label>
                     <div className="font-semibold text-secondary-900">
-                      {selectedReservation.services?.name}
+                      {selectedReservation.services?.name_service}
                     </div>
                   </div>
                   <div>
@@ -445,7 +526,7 @@ export default function Riwayat() {
                       {selectedReservation.user_locations?.label}
                     </div>
                     <div className="text-sm text-secondary-600">
-                      {selectedReservation.user_locations?.address}
+                      {selectedReservation.user_locations?.location}
                     </div>
                   </div>
                   <div>
@@ -454,7 +535,7 @@ export default function Riwayat() {
                     </label>
                     <div className="font-semibold text-secondary-900">
                       {new Date(
-                        selectedReservation.service_date
+                        selectedReservation.scheduled_datetime
                       ).toLocaleDateString("id-ID")}
                     </div>
                     {selectedReservation.schedule_slot && (
@@ -470,7 +551,7 @@ export default function Riwayat() {
                       Volume
                     </label>
                     <div className="font-semibold text-secondary-900">
-                      {selectedReservation.volume} m³
+                      {selectedReservation.septic_tank} m³
                     </div>
                   </div>
                   <div>
@@ -500,14 +581,14 @@ export default function Riwayat() {
                     )}
                   </div>
                 )}
-                {selectedReservation.notes && (
+                {selectedReservation.customer_notes && (
                   <div>
                     <label className="block text-sm font-medium text-secondary-700 mb-1">
                       Catatan
                     </label>
                     <div className="bg-secondary-50 rounded-lg p-3">
                       <p className="text-secondary-900">
-                        {selectedReservation.notes}
+                        {selectedReservation.customer_notes}
                       </p>
                     </div>
                   </div>

@@ -19,7 +19,7 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [userLocations, setUserLocations] = useState([]);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [locationForm, setLocationForm] = useState({ label: "", address: "" });
+  const [locationForm, setLocationForm] = useState({ label: "", location: "" });
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [locationPickerValue, setLocationPickerValue] = useState(null);
@@ -89,7 +89,7 @@ export default function Profile() {
   const handleMapLocationChange = (val) => {
     setLocationForm({
       ...locationForm,
-      address: val.location,
+      location: val.location,
       latitude: val.latitude,
       longitude: val.longitude,
     });
@@ -97,7 +97,7 @@ export default function Profile() {
       lat: val.latitude,
       lng: val.longitude,
       label: val.location,
-      address: val.location,
+      location: val.location,
     });
   };
 
@@ -113,7 +113,7 @@ export default function Profile() {
     setLocationError("");
     if (
       !locationForm.label ||
-      !locationForm.address ||
+      !locationForm.location ||
       typeof locationForm.latitude === "undefined" ||
       typeof locationForm.longitude === "undefined"
     ) {
@@ -121,7 +121,7 @@ export default function Profile() {
       setLocationLoading(false);
       return;
     }
-    if (!locationForm.address.toLowerCase().includes("bogor")) {
+    if (!locationForm.location.toLowerCase().includes("bogor")) {
       setLocationError("Alamat harus berada di wilayah Bogor.");
       setLocationLoading(false);
       return;
@@ -130,7 +130,7 @@ export default function Profile() {
       {
         user_id: user.id,
         label: locationForm.label,
-        address: locationForm.address,
+        location: locationForm.location,
         latitude: locationForm.latitude,
         longitude: locationForm.longitude,
       },
@@ -139,7 +139,7 @@ export default function Profile() {
       setLocationError(error.message);
     } else {
       setShowLocationModal(false);
-      setLocationForm({ label: "", address: "" });
+      setLocationForm({ label: "", location: "" });
       fetchUserLocations();
       setAlert({ message: "Lokasi berhasil ditambahkan!", type: "success" });
     }
@@ -260,7 +260,7 @@ export default function Profile() {
       setLocationError(error.message);
     } else {
       setShowLocationModal(false);
-      setLocationForm({ label: "", address: "" });
+      setLocationForm({ label: "", location: "" });
       setLocationPickerValue(null);
       fetchUserLocations();
       setAlert({ message: "Lokasi berhasil dihapus!", type: "success" });
@@ -272,7 +272,7 @@ export default function Profile() {
     e.preventDefault();
     setLocationLoading(true);
     setLocationError("");
-    if (!locationForm.label || !locationForm.address) {
+    if (!locationForm.label || !locationForm.location) {
       setLocationError("Label dan alamat wajib diisi.");
       setLocationLoading(false);
       return;
@@ -282,7 +282,7 @@ export default function Profile() {
       .from("user_locations")
       .update({
         label: locationForm.label,
-        address: locationForm.address,
+        location: locationForm.location,
         latitude: locationForm.latitude,
         longitude: locationForm.longitude,
       })
@@ -291,7 +291,7 @@ export default function Profile() {
       setLocationError(error.message);
     } else {
       setShowLocationModal(false);
-      setLocationForm({ label: "", address: "" });
+      setLocationForm({ label: "", location: "" });
       setLocationPickerValue(null);
       fetchUserLocations();
       setAlert({ message: "Lokasi berhasil diperbarui!", type: "success" });
@@ -576,19 +576,19 @@ export default function Profile() {
                         onClick={() => {
                           setLocationForm({
                             label: loc.label,
-                            address: loc.address,
+                            location: loc.location,
                             latitude: loc.latitude,
                             longitude: loc.longitude,
                           });
                           setLocationPickerValue({
                             lat: loc.latitude,
                             lng: loc.longitude,
-                            label: loc.address,
-                            address: loc.address,
+                            label: loc.location,
+                            location: loc.location,
                           });
                           setShowLocationModal(loc.id);
                         }}
-                        title={loc.address}
+                        title={loc.location}
                         type="button"
                       >
                         {loc.label}
@@ -702,7 +702,7 @@ export default function Profile() {
               <button
                 onClick={() => {
                   setShowLocationModal(false);
-                  setLocationForm({ label: "", address: "" });
+                  setLocationForm({ label: "", location: "" });
                   setLocationError("");
                   setLocationPickerValue(null);
                 }}

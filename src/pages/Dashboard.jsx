@@ -51,7 +51,6 @@ export default function Dashboard() {
           return;
         }
 
-        // Redirect berdasarkan role
         if (data.role === "admin") {
           navigate("/admin");
           return;

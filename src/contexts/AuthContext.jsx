@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const parsedUser = JSON.parse(savedUser);
 
-        // Validate token with backend
         fetch("https://settled-modern-stinkbug.ngrok-free.app/api/auth/me", {
           method: "GET",
           headers: {

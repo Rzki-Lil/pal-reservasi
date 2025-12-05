@@ -113,11 +113,11 @@ export default function AdminDashboard() {
         assignmentsRes.json(),
       ]);
 
-      setReservations(reservationsData || []);
-      // Filter untuk employee saja, bukan staff
-      setStaffList(staffData?.filter((u) => u.role === "employee") || []);
+      setReservations(Array.isArray(reservationsData) ? reservationsData : []);
+      setStaffList(Array.isArray(staffData) ? staffData.filter((u) => u.role === "employee") : []);
 
-      const processedAssignments = (assignmentsData || []).map(
+      const assignmentsArray = Array.isArray(assignmentsData) ? assignmentsData : [];
+      const processedAssignments = assignmentsArray.map(
         (assignment) => ({
           ...assignment,
           staff_ids:
@@ -128,6 +128,9 @@ export default function AdminDashboard() {
       setAssignments(processedAssignments);
     } catch (error) {
       console.error("Failed to fetch data:", error);
+      setReservations([]);
+      setStaffList([]);
+      setAssignments([]);
     }
   };
 
@@ -271,14 +274,15 @@ export default function AdminDashboard() {
     return texts[status] || status;
   };
 
-  // Statistics - sesuaikan dengan status reservasi langsung
-  const totalPending = reservations.filter(r => r.status === "pending").length;
-  const totalConfirmed = reservations.filter(r => r.status === "confirmed").length;
-  const totalInProgress = reservations.filter(r => r.status === "in_progress").length;
-  const totalCompleted = reservations.filter(r => r.status === "completed").length;
+  // Statistics - sesuaikan dengan status reservasi langsung (dengan pengecekan array)
+  const reservationsArray = Array.isArray(reservations) ? reservations : [];
+  const totalPending = reservationsArray.filter(r => r.status === "pending").length;
+  const totalConfirmed = reservationsArray.filter(r => r.status === "confirmed").length;
+  const totalInProgress = reservationsArray.filter(r => r.status === "in_progress").length;
+  const totalCompleted = reservationsArray.filter(r => r.status === "completed").length;
 
-  // Filter reservations - gunakan status langsung dari DB
-  const filteredReservations = reservations
+  // Filter reservations - gunakan status langsung dari DB (dengan pengecekan array)
+  const filteredReservations = reservationsArray
     .filter((r) => {
       if (filterStatus === "all") return true;
       return r.status === filterStatus;

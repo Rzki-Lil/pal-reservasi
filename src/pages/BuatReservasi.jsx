@@ -588,15 +588,18 @@ export default function BuatReservasi() {
                 {/* Info harga */}
                 <div className="bg-secondary-50 rounded-lg p-4 mt-4 border border-secondary-200">
                   <div className="mb-2 font-semibold text-secondary-900">
-                    <span>💰 Estimasi Biaya</span>
+                    <span>💰 Informasi Biaya</span>
                   </div>
                   <div className="text-sm text-secondary-700">
-                    <p>Biaya akan dihitung setelah petugas melakukan survei dan mengukur volume tangki septik Anda.</p>
+                    <p>Biaya akan dihitung setelah petugas melakukan survei dan menentukan jumlah rit yang dibutuhkan.</p>
                     {selectedService && (
                       <p className="mt-2">
-                        <span className="font-medium">Tarif dasar:</span> Rp {selectedService.price?.toLocaleString()} / 3m³
+                        <span className="font-medium">Tarif:</span> Rp {selectedService.price?.toLocaleString()} / rit
                       </p>
                     )}
+                    <p className="mt-2 text-xs text-secondary-500">
+                      Total biaya = Jumlah rit × Tarif per rit
+                    </p>
                   </div>
                 </div>
               </div>

@@ -211,10 +211,11 @@ export default function Dashboard() {
   };
 
   const getTotalPrice = (reservation) => {
-    if (!reservation.services?.price || !reservation.septic_tank) return 0;
-    const vol = parseInt(reservation.septic_tank, 10) || 1;
-    const multiplier = Math.ceil(vol / 3);
-    return reservation.services.price * multiplier;
+    if (!reservation.services?.price) return 0;
+    // Harga berdasarkan rit, bukan volume
+    const rit = parseInt(reservation.rit, 10) || 0;
+    if (rit <= 0) return 0;
+    return reservation.services.price * rit;
   };
 
   // Cek apakah ada payment pending untuk reservasi ini

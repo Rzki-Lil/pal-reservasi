@@ -27,14 +27,12 @@ export default function AssignmentModal({
     e.preventDefault();
     const validStaffs = selectedStaffs.filter((id) => id !== "");
     if (validStaffs.length === 0) return;
-    // convert to numbers if needed
     const staffIds = validStaffs.map((id) =>
       typeof id === "string" && /^\d+$/.test(id) ? Number(id) : id
     );
     try {
       setSubmitting(true);
       const ok = await onAssign(reservation.id, staffIds);
-      // if parent returned success, close modal locally
       if (ok) {
         onClose();
       }
@@ -87,18 +85,26 @@ export default function AssignmentModal({
               <div className="flex justify-between">
                 <span className="text-secondary-600">Tanggal:</span>
                 <span className="font-medium">
-                  {new Date(reservation.service_date).toLocaleDateString(
-                    "id-ID"
-                  )}
+                  {reservation.scheduled_datetime 
+                    ? new Date(reservation.scheduled_datetime).toLocaleDateString("id-ID")
+                    : "-"}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-secondary-600">Slot Waktu:</span>
-                <span className="font-medium">{reservation.schedule_slot}</span>
+                <span className="font-medium">{reservation.schedule_slot || "-"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-secondary-600">Volume:</span>
-                <span className="font-medium">{reservation.volume} m³</span>
+                <span className="font-medium">
+                  {reservation.septic_tank ? `${reservation.septic_tank} m³` : "Belum diukur"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-secondary-600">Rit:</span>
+                <span className="font-medium">
+                  {reservation.rit ? `${reservation.rit} rit` : "Belum ditentukan"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-secondary-600">Status:</span>

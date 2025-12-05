@@ -93,10 +93,19 @@ export default function EmployeeDashboard() {
   };
 
   const handleOpenInspection = (reservation) => {
+    // Cek apakah inspeksi sudah pernah diinput
+    if (reservation.septic_tank && reservation.rit) {
+      setAlert({
+        message: `Inspeksi sudah pernah diinput: Volume ${reservation.septic_tank}m³, ${reservation.rit} rit`,
+        type: "error"
+      });
+      return;
+    }
+    
     setSelectedReservation(reservation);
     setInspectionForm({
       septic_tank: reservation.septic_tank || "",
-      rit: reservation.rit || "",
+      rit: reservation.rit || "1",
     });
   };
 
@@ -347,10 +356,9 @@ export default function EmployeeDashboard() {
                   </div>
                 </div>
 
-                {/* Septic Tank Info (if already filled) */}
                 {assignment.septic_tank && (
                   <div className="mb-4 p-4 bg-secondary-50 rounded-lg">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <span className="text-secondary-600">Volume Tangki:</span>
                         <span className="ml-2 font-semibold">{assignment.septic_tank} m³</span>
@@ -361,21 +369,26 @@ export default function EmployeeDashboard() {
                           <span className="ml-2 font-semibold">{assignment.rit}</span>
                         </div>
                       )}
+                      {assignment.rit && assignment.services?.price && (
+                        <div>
+                          <span className="text-secondary-600">Total:</span>
+                          <span className="ml-2 font-semibold text-primary-600">
+                            Rp {(assignment.services.price * assignment.rit).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Customer Notes */}
                 {assignment.customer_notes && (
                   <div className="mb-4 text-sm text-secondary-600 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
                     <strong>Catatan Pelanggan:</strong> {assignment.customer_notes}
                   </div>
                 )}
 
-                {/* Actions */}
                 <div className="flex flex-wrap gap-3">
-                  {/* Tombol Input Inspeksi untuk status confirmed */}
-                  {assignment.status === "confirmed" && (
+                  {assignment.status === "confirmed" && !assignment.septic_tank && !assignment.rit && (
                     <button
                       onClick={() => handleOpenInspection(assignment)}
                       className="btn-primary text-sm py-2 px-4 flex items-center"
@@ -386,8 +399,16 @@ export default function EmployeeDashboard() {
                       Input Hasil Inspeksi
                     </button>
                   )}
+                  
+                  {assignment.status === "confirmed" && assignment.septic_tank && assignment.rit && (
+                    <div className="text-sm text-blue-600 font-medium py-2 px-4 bg-blue-50 rounded-lg flex items-center">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Menunggu Pembayaran Customer
+                    </div>
+                  )}
 
-                  {/* Tombol Selesaikan untuk status in_progress */}
                   {assignment.status === "in_progress" && (
                     <button
                       onClick={() => handleCompleteReservation(assignment.id)}
@@ -464,7 +485,7 @@ export default function EmployeeDashboard() {
                 <strong>Layanan:</strong> {selectedReservation.services?.name_service}
               </p>
               <p className="text-sm text-secondary-600">
-                <strong>Harga per 3m³:</strong> Rp {selectedReservation.services?.price?.toLocaleString()}
+                <strong>Harga per Rit:</strong> Rp {selectedReservation.services?.price?.toLocaleString()}
               </p>
             </div>
 
@@ -483,31 +504,38 @@ export default function EmployeeDashboard() {
                   onChange={(e) => setInspectionForm({ ...inspectionForm, septic_tank: e.target.value })}
                   placeholder="Masukkan volume dalam m³"
                 />
+                <p className="text-xs text-secondary-500 mt-1">
+                  Volume tangki septik untuk keperluan dokumentasi
+                </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-secondary-700 mb-2">
-                  Rit (opsional)
+                  Jumlah Rit *
                 </label>
                 <input
                   type="number"
-                  step="0.1"
-                  min="0"
+                  step="1"
+                  min="1"
+                  required
                   className="input-primary"
                   value={inspectionForm.rit}
                   onChange={(e) => setInspectionForm({ ...inspectionForm, rit: e.target.value })}
                   placeholder="Masukkan jumlah rit"
                 />
+                <p className="text-xs text-secondary-500 mt-1">
+                  Jumlah rit menentukan total biaya yang harus dibayar
+                </p>
               </div>
 
-              {inspectionForm.septic_tank && (
+              {inspectionForm.rit && parseFloat(inspectionForm.rit) > 0 && (
                 <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
                   <p className="text-sm text-primary-800">
-                    <strong>Estimasi Biaya:</strong>{" "}
-                    Rp {(selectedReservation.services?.price * Math.ceil(parseFloat(inspectionForm.septic_tank) / 3)).toLocaleString()}
+                    <strong>Total Biaya:</strong>{" "}
+                    Rp {(selectedReservation.services?.price * parseFloat(inspectionForm.rit)).toLocaleString()}
                   </p>
                   <p className="text-xs text-primary-600 mt-1">
-                    ({inspectionForm.septic_tank} m³ ÷ 3 = {Math.ceil(parseFloat(inspectionForm.septic_tank) / 3)} unit × Rp {selectedReservation.services?.price?.toLocaleString()})
+                    ({inspectionForm.rit} rit × Rp {selectedReservation.services?.price?.toLocaleString()})
                   </p>
                 </div>
               )}
@@ -524,7 +552,7 @@ export default function EmployeeDashboard() {
                 <button
                   type="submit"
                   className="flex-1 btn-primary"
-                  disabled={submitting || !inspectionForm.septic_tank}
+                  disabled={submitting || !inspectionForm.septic_tank || !inspectionForm.rit}
                 >
                   {submitting ? "Menyimpan..." : "Simpan & Kirim Tagihan"}
                 </button>

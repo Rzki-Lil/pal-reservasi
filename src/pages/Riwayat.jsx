@@ -72,10 +72,11 @@ export default function Riwayat() {
   };
 
   const getTotalPrice = (reservation) => {
-    if (!reservation.services?.price || !reservation.septic_tank) return 0;
-    const vol = parseInt(reservation.septic_tank, 10) || 1;
-    const multiplier = Math.ceil(vol / 3);
-    return reservation.services.price * multiplier;
+    if (!reservation.services?.price) return 0;
+    // Harga berdasarkan rit, bukan volume
+    const rit = parseInt(reservation.rit, 10) || 0;
+    if (rit <= 0) return 0;
+    return reservation.services.price * rit;
   };
 
   // Cek apakah ada payment pending untuk reservasi ini
@@ -267,16 +268,17 @@ export default function Riwayat() {
                         {new Date(
                           reservation.scheduled_datetime
                         ).toLocaleDateString("id-ID")}{" "}
-                        • 📦 {reservation.septic_tank} m³
+                        {reservation.septic_tank && `• 📦 ${reservation.septic_tank} m³`}
+                        {reservation.rit && ` • 🚛 ${reservation.rit} rit`}
                       </div>
                     </div>
-                    {reservation.septic_tank && (
+                    {reservation.rit && (
                       <div className="text-right">
                         <div className="text-lg font-bold text-primary-600">
                           Rp {getTotalPrice(reservation).toLocaleString()}
                         </div>
                         <div className="text-xs text-secondary-500">
-                          Total Biaya
+                          {reservation.rit} rit × Rp {reservation.services?.price?.toLocaleString()}
                         </div>
                       </div>
                     )}
@@ -313,7 +315,7 @@ export default function Riwayat() {
                 )}
 
                 {/* Tombol Bayar untuk status confirmed dengan payment pending */}
-                {reservation.status === "confirmed" && hasPendingPayment(reservation) && (
+                {reservation.status === "confirmed" && hasPendingPayment(reservation) && reservation.rit && (
                   <div className="mb-4">
                     <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-3">
                       <div className="flex items-start">
@@ -335,6 +337,10 @@ export default function Riwayat() {
                           <p className="mt-1">
                             Volume tangki septik:{" "}
                             <strong>{reservation.septic_tank} m³</strong>
+                          </p>
+                          <p>
+                            Jumlah rit:{" "}
+                            <strong>{reservation.rit} rit</strong>
                           </p>
                           <p>
                             Total biaya:{" "}

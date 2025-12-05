@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Alert from "../components/Alert";
+import ImageCropper from "../components/ImageCropper";
 import MapLocationPicker from "../components/MapLocationPicker";
 import Navbar from "../components/Navbar";
 import PasswordRequirements from "../components/PasswordRequirements";
@@ -42,6 +43,11 @@ export default function Profile() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  
+  // State untuk image cropper
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const [showCropper, setShowCropper] = useState(false);
+  
   const fileInputRef = useRef();
   const navigate = useNavigate();
 
@@ -151,43 +157,86 @@ export default function Profile() {
   const handleProfilePicChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    setError("");
-
-    if (profilePicUrl) {
-      const oldPath = profilePicUrl.split("/profile-picture/")[1];
-      if (oldPath) {
-        await supabase.storage.from("profile-picture").remove([oldPath]);
-      }
+    
+    // Validasi tipe file
+    if (!file.type.startsWith("image/")) {
+      setError("File harus berupa gambar");
+      return;
     }
-
-    const fileExt = file.name.split(".").pop();
-    const filePath = `${user.id}_${Date.now()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage
-      .from("profile-picture")
-      .upload(filePath, file, { upsert: false });
-
-    if (uploadError) {
-      setError("Gagal upload foto profil: " + uploadError.message);
-      setUploading(false);
+    
+    // Validasi ukuran file (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Ukuran file maksimal 5MB");
       return;
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("profile-picture")
-      .getPublicUrl(filePath);
+    // Convert file to data URL untuk cropper
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageToCrop(reader.result);
+      setShowCropper(true);
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input agar bisa pilih file yang sama lagi
+    e.target.value = "";
+  };
 
-    const url = publicUrlData?.publicUrl;
-    setProfilePicUrl(url);
+  const handleCropComplete = async (croppedBlob) => {
+    setShowCropper(false);
+    setImageToCrop(null);
+    setUploading(true);
+    setError("");
 
-    await supabase
-      .from("users")
-      .update({ profile_picture: url })
-      .eq("id", user.id);
+    try {
+      // Hapus foto lama jika ada
+      if (profilePicUrl) {
+        const oldPath = profilePicUrl.split("/user-profile/")[1];
+        if (oldPath) {
+          await supabase.storage.from("user-profile").remove([oldPath]);
+        }
+      }
 
-    setUser({ ...user, profile_picture: url });
+      // Upload cropped image
+      const fileName = `${user.id}_${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from("user-profile")
+        .upload(fileName, croppedBlob, { 
+          upsert: false,
+          contentType: "image/jpeg"
+        });
+
+      if (uploadError) {
+        setError("Gagal upload foto profil: " + uploadError.message);
+        setUploading(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("user-profile")
+        .getPublicUrl(fileName);
+
+      const url = publicUrlData?.publicUrl;
+      setProfilePicUrl(url);
+
+      await supabase
+        .from("users")
+        .update({ profile_picture: url })
+        .eq("id", user.id);
+
+      setUser({ ...user, profile_picture: url });
+      setAlert({ message: "Foto profil berhasil diperbarui!", type: "success" });
+    } catch (err) {
+      setError("Gagal menyimpan foto profil");
+      console.error(err);
+    }
 
     setUploading(false);
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    setImageToCrop(null);
   };
 
   const handlePhoneChange = (e) => {
@@ -434,6 +483,16 @@ export default function Profile() {
         type={alert.type}
         onClose={() => setAlert({ message: "", type: "success" })}
       />
+      
+      {/* Image Cropper Modal */}
+      {showCropper && imageToCrop && (
+        <ImageCropper
+          image={imageToCrop}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
+      
       <div className="max-w-4xl mx-auto py-10 px-4">
         <h1 className="text-2xl font-bold text-secondary-900 mb-6">
           Profil Saya

@@ -63,7 +63,7 @@ export default function Riwayat() {
   const getStatusText = (status) => {
     const texts = {
       pending: "Menunggu Survei",
-      confirmed: "Menunggu Pembayaran",
+      // confirmed: "Menunggu Pembayaran",
       in_progress: "Sedang Dikerjakan",
       completed: "Selesai",
       cancelled: "Dibatalkan",
@@ -184,7 +184,7 @@ export default function Riwayat() {
               >
                 <option value="all">Semua Status</option>
                 <option value="pending">Menunggu Survei</option>
-                <option value="confirmed">Menunggu Pembayaran</option>
+                {/* <option value="confirmed">Menunggu Pembayaran</option> */}
                 <option value="in_progress">Sedang Dikerjakan</option>
                 <option value="completed">Selesai</option>
                 <option value="cancelled">Dibatalkan</option>

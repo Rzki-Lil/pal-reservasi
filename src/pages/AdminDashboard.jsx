@@ -266,7 +266,6 @@ export default function AdminDashboard() {
   const getStatusText = (status) => {
     const texts = {
       pending: "Menunggu Survei",
-      confirmed: "Menunggu Pembayaran",
       in_progress: "Sedang Dikerjakan",
       completed: "Selesai",
       cancelled: "Dibatalkan",
@@ -274,14 +273,12 @@ export default function AdminDashboard() {
     return texts[status] || status;
   };
 
-  // Statistics - sesuaikan dengan status reservasi langsung (dengan pengecekan array)
   const reservationsArray = Array.isArray(reservations) ? reservations : [];
   const totalPending = reservationsArray.filter(r => r.status === "pending").length;
   const totalConfirmed = reservationsArray.filter(r => r.status === "confirmed").length;
   const totalInProgress = reservationsArray.filter(r => r.status === "in_progress").length;
   const totalCompleted = reservationsArray.filter(r => r.status === "completed").length;
 
-  // Filter reservations - gunakan status langsung dari DB (dengan pengecekan array)
   const filteredReservations = reservationsArray
     .filter((r) => {
       if (filterStatus === "all") return true;
@@ -303,13 +300,11 @@ export default function AdminDashboard() {
       return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
     });
 
-  // Pagination
   const totalPages = Math.ceil(filteredReservations.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedReservations = filteredReservations.slice(startIndex, endIndex);
 
-  // Group by date
   const groupedReservations = paginatedReservations.reduce((acc, reservation) => {
     const date = new Date(reservation.scheduled_datetime).toLocaleDateString("id-ID", {
       weekday: "long",
@@ -355,7 +350,6 @@ export default function AdminDashboard() {
     return pages;
   };
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filterStatus, searchQuery, sortOrder]);

@@ -13,11 +13,10 @@ export default function BuatReservasi() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    service_type_id: "",
     location_id: "",
     scheduled_datetime: "",
     customer_notes: "",
-    schedule_slot: "", 
+    schedule_slot: "",
   });
   const [services, setServices] = useState([]);
   const [userLocations, setUserLocations] = useState([]);
@@ -120,34 +119,12 @@ export default function BuatReservasi() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === "location_id") {
-      const selectedLoc = userLocations.find((loc) => String(loc.id) === String(value));
-      if (selectedLoc) {
-        const isKabupaten = detectKabupatenFromAddress(selectedLoc.location);
-        let autoService = null;
-        if (isKabupaten) {
-          autoService = services.find((s) =>
-            String(s.name_service || "").toLowerCase().includes("kabupaten")
-          );
-        } else {
-          autoService = services.find((s) =>
-            String(s.name_service || "").toLowerCase().includes("kota")
-          );
-        }
-        setFormData((prev) => ({
-          ...prev,
-          location_id: value,
-          service_type_id: autoService ? autoService.id : prev.service_type_id,
-        }));
-        return;
-      }
-    }
 
     if (name === "scheduled_datetime") {
       setFormData({
         ...formData,
         [name]: value,
-        schedule_slot: "", 
+        schedule_slot: "",
       });
       return;
     }
@@ -175,7 +152,6 @@ export default function BuatReservasi() {
           },
           body: JSON.stringify({
             user_id: user.id,
-            service_type_id: formData.service_type_id,
             location_id: formData.location_id,
             scheduled_datetime: formData.scheduled_datetime,
             customer_notes: formData.customer_notes,
@@ -188,8 +164,9 @@ export default function BuatReservasi() {
 
       if (response.ok) {
         setAlert({ 
-          message: "Reservasi berhasil dibuat! Menunggu pengecekan dan konfirmasi dari petugas.", 
-          type: "success" });
+          message: "Reservasi berhasil dibuat! Petugas akan melakukan survei dan menentukan jenis layanan.", 
+          type: "success" 
+        });
         
         setTimeout(() => {
           navigate("/riwayat");
@@ -288,33 +265,6 @@ export default function BuatReservasi() {
                       </Link>
                     </p>
                   )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-secondary-700 mb-2">
-                    Jenis Layanan
-                  </label>
-                  <div className="bg-secondary-100 rounded-lg px-4 py-3 border border-secondary-200">
-                    <div className="font-semibold text-secondary-900">
-                      {selectedService
-                        ? selectedService.name_service
-                        : "Pilih lokasi terlebih dahulu"}
-                    </div>
-                    {selectedService && (
-                      <div className="text-sm text-secondary-600">
-                        Rp {selectedService.price?.toLocaleString()} / 3m³
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-xs text-secondary-500 mt-2">
-                    Jenis layanan dipilih otomatis berdasarkan alamat lokasi
-                    Anda.
-                  </div>
-                  <input
-                    type="hidden"
-                    name="service_type_id"
-                    value={formData.service_type_id}
-                  />
                 </div>
 
                 {/* Service Date */}
@@ -448,7 +398,6 @@ export default function BuatReservasi() {
                       loading ||
                       loadingSlots ||
                       userLocations.length === 0 ||
-                      !formData.service_type_id ||
                       !formData.location_id ||
                       !formData.scheduled_datetime ||
                       !formData.schedule_slot
@@ -457,7 +406,6 @@ export default function BuatReservasi() {
                       loading ||
                       loadingSlots ||
                       userLocations.length === 0 ||
-                      !formData.service_type_id ||
                       !formData.location_id ||
                       !formData.scheduled_datetime ||
                       !formData.schedule_slot
@@ -529,14 +477,6 @@ export default function BuatReservasi() {
                 Ringkasan Reservasi
               </h3>
               <div className="space-y-4">
-                {formData.service_type_id && selectedService && (
-                  <div className="flex justify-between">
-                    <span className="text-secondary-600">Layanan:</span>
-                    <span className="font-medium text-secondary-900">
-                      {selectedService.name_service}
-                    </span>
-                  </div>
-                )}
                 {formData.scheduled_datetime && (
                   <div className="flex justify-between">
                     <span className="text-secondary-600">Tanggal:</span>
@@ -575,11 +515,12 @@ export default function BuatReservasi() {
                     <div className="text-sm text-primary-800">
                       <p className="font-medium mb-1">Alur Reservasi:</p>
                       <ul className="space-y-1 text-primary-700">
-                        <li>1. Buat reservasi (tanpa pembayaran)</li>
-                        <li>2. Petugas akan datang untuk survei</li>
-                        <li>3. Petugas input volume tangki septik</li>
-                        <li>4. Anda akan menerima link pembayaran</li>
-                        <li>5. Setelah bayar, pekerjaan dimulai</li>
+                        <li>1. Buat reservasi (input lokasi & jadwal)</li>
+                        <li>2. Admin akan assign petugas</li>
+                        <li>3. Petugas survei & tentukan jenis layanan</li>
+                        <li>4. Petugas input volume & rit</li>
+                        <li>5. Anda terima link pembayaran</li>
+                        <li>6. Setelah bayar, pekerjaan dimulai</li>
                       </ul>
                     </div>
                   </div>
@@ -591,14 +532,9 @@ export default function BuatReservasi() {
                     <span>💰 Informasi Biaya</span>
                   </div>
                   <div className="text-sm text-secondary-700">
-                    <p>Biaya akan dihitung setelah petugas melakukan survei dan menentukan jumlah rit yang dibutuhkan.</p>
-                    {selectedService && (
-                      <p className="mt-2">
-                        <span className="font-medium">Tarif:</span> Rp {selectedService.price?.toLocaleString()} / rit
-                      </p>
-                    )}
+                    <p>Jenis layanan dan biaya akan ditentukan oleh petugas setelah survei lokasi.</p>
                     <p className="mt-2 text-xs text-secondary-500">
-                      Total biaya = Jumlah rit × Tarif per rit
+                      Biaya dihitung berdasarkan: Jumlah rit × Tarif per rit
                     </p>
                   </div>
                 </div>

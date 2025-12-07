@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Alert from "../components/Alert";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
+import { kabupatenBogor } from "../utils/kabupatenBogor";
 
 export default function EmployeeDashboard() {
   const { user, token, logout } = useAuth();
@@ -13,8 +14,14 @@ export default function EmployeeDashboard() {
   const [alert, setAlert] = useState({ message: "", type: "success" });
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedReservation, setSelectedReservation] = useState(null);
-  const [inspectionForm, setInspectionForm] = useState({ septic_tank: "", rit: "" });
+  const [inspectionForm, setInspectionForm] = useState({ 
+    septic_tank: "", 
+    rit: "", 
+    service_type_id: "" 
+  });
   const [submitting, setSubmitting] = useState(false);
+  const [services, setServices] = useState([]);
+  const [filteredServices, setFilteredServices] = useState([]);
 
   useEffect(() => {
     if (token) {
@@ -48,7 +55,8 @@ export default function EmployeeDashboard() {
 
   const fetchAssignments = async () => {
     try {
-      const res = await fetch(
+      // Ambil assignments terlebih dahulu
+      const assignmentsRes = await fetch(
         "https://settled-modern-stinkbug.ngrok-free.app/api/employee/my-assignments",
         {
           headers: {
@@ -57,15 +65,41 @@ export default function EmployeeDashboard() {
           },
         }
       );
-      const data = await res.json();
 
-      if (res.ok) {
-        setAssignments(data);
+      const assignmentsData = await assignmentsRes.json();
+      if (assignmentsRes.ok) {
+        setAssignments(assignmentsData);
       } else {
-        setAlert({ message: data.message || "Gagal memuat data", type: "error" });
+        setAlert({ message: assignmentsData.message || "Gagal memuat data tugas", type: "error" });
+        setAssignments([]);
+      }
+
+      // Kemudian coba ambil daftar layanan inspeksi dari endpoint employee yang baru
+      try {
+        const servicesRes = await fetch(
+          "https://settled-modern-stinkbug.ngrok-free.app/api/employee/inspection-services",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "ngrok-skip-browser-warning": "true",
+            },
+          }
+        );
+        if (servicesRes.ok) {
+          const servicesData = await servicesRes.json();
+          setServices(Array.isArray(servicesData) ? servicesData : []);
+        } else {
+          // fallback jika endpoint tidak tersedia atau mengembalikan error
+          setServices([]);
+        }
+      } catch (err) {
+        // fallback aman
+        setServices([]);
       }
     } catch (error) {
       setAlert({ message: "Gagal memuat data tugas", type: "error" });
+      setServices([]);
+      setAssignments([]);
     }
     setLoading(false);
   };
@@ -93,7 +127,6 @@ export default function EmployeeDashboard() {
   };
 
   const handleOpenInspection = (reservation) => {
-    // Cek apakah inspeksi sudah pernah diinput
     if (reservation.septic_tank && reservation.rit) {
       setAlert({
         message: `Inspeksi sudah pernah diinput: Volume ${reservation.septic_tank}m³, ${reservation.rit} rit`,
@@ -102,10 +135,45 @@ export default function EmployeeDashboard() {
       return;
     }
     
+    let autoServiceId = "";
+    let matchedServices = [];
+    if (reservation.user_locations?.location && services && services.length > 0) {
+      const location = reservation.user_locations.location.toLowerCase();
+      const isKabupaten = kabupatenBogor.some((kec) => {
+        const k = kec.toLowerCase().trim();
+        return new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(location);
+      });
+
+      if (isKabupaten) {
+        matchedServices = services.filter((s) =>
+          s.name_service?.toLowerCase().includes("kabupaten")
+        );
+      } else {
+        matchedServices = services.filter((s) =>
+          s.name_service?.toLowerCase().includes("kota")
+        );
+      }
+
+      if (matchedServices.length > 0) {
+        autoServiceId = matchedServices[0].id;
+      } else {
+        const kabService = services.find((s) =>
+          s.name_service?.toLowerCase().includes("kabupaten")
+        );
+        const kotaService = services.find((s) =>
+          s.name_service?.toLowerCase().includes("kota")
+        );
+        autoServiceId = isKabupaten ? (kabService?.id || "") : (kotaService?.id || "");
+      }
+    }
+
+    setFilteredServices(matchedServices.length > 0 ? matchedServices : []);
+
     setSelectedReservation(reservation);
     setInspectionForm({
       septic_tank: reservation.septic_tank || "",
       rit: reservation.rit || "1",
+      service_type_id: reservation.service_type_id || autoServiceId || "",
     });
   };
 
@@ -127,6 +195,7 @@ export default function EmployeeDashboard() {
           body: JSON.stringify({
             septic_tank: parseFloat(inspectionForm.septic_tank),
             rit: inspectionForm.rit ? parseFloat(inspectionForm.rit) : null,
+            service_type_id: inspectionForm.service_type_id,
           }),
         }
       );
@@ -139,6 +208,7 @@ export default function EmployeeDashboard() {
           type: "success",
         });
         setSelectedReservation(null);
+        setFilteredServices([]);
         fetchAssignments();
       } else {
         setAlert({ message: data.message || "Gagal menyimpan data", type: "error" });
@@ -461,11 +531,14 @@ export default function EmployeeDashboard() {
       {/* Modal Input Inspeksi */}
       {selectedReservation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-secondary-900">Input Hasil Inspeksi</h3>
               <button
-                onClick={() => setSelectedReservation(null)}
+                onClick={() => {
+                  setSelectedReservation(null);
+                  setFilteredServices([]);
+                }}
                 className="text-secondary-400 hover:text-secondary-600"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -481,15 +554,30 @@ export default function EmployeeDashboard() {
               <p className="text-sm text-secondary-600">
                 <strong>Lokasi:</strong> {selectedReservation.user_locations?.location}
               </p>
-              <p className="text-sm text-secondary-600">
-                <strong>Layanan:</strong> {selectedReservation.services?.name_service}
-              </p>
-              <p className="text-sm text-secondary-600">
-                <strong>Harga per Rit:</strong> Rp {selectedReservation.services?.price?.toLocaleString()}
-              </p>
             </div>
 
             <form onSubmit={handleSubmitInspection} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-2">
+                  Jenis Layanan *
+                </label>
+                <select
+                  value={inspectionForm.service_type_id}
+                  onChange={(e) =>
+                    setInspectionForm({ ...inspectionForm, service_type_id: e.target.value })
+                  }
+                  className="input-primary"
+                  required
+                >
+                  <option value="">Pilih Jenis Layanan</option>
+                  {(filteredServices.length > 0 ? filteredServices : services).map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name_service} - Rp {service.price?.toLocaleString()} / rit
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-secondary-700 mb-2">
                   Volume Tangki Septik (m³) *
@@ -528,15 +616,29 @@ export default function EmployeeDashboard() {
                 </p>
               </div>
 
-              {inspectionForm.rit && parseFloat(inspectionForm.rit) > 0 && (
+              {inspectionForm.rit && 
+               inspectionForm.service_type_id && 
+               parseFloat(inspectionForm.rit) > 0 && (
                 <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
-                  <p className="text-sm text-primary-800">
-                    <strong>Total Biaya:</strong>{" "}
-                    Rp {(selectedReservation.services?.price * parseFloat(inspectionForm.rit)).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-primary-600 mt-1">
-                    ({inspectionForm.rit} rit × Rp {selectedReservation.services?.price?.toLocaleString()})
-                  </p>
+                  {(() => {
+                    const selectedService = services.find(
+                      (s) => s.id.toString() === inspectionForm.service_type_id.toString()
+                    );
+                    if (selectedService) {
+                      return (
+                        <>
+                          <p className="text-sm text-primary-800">
+                            <strong>Total Biaya:</strong>{" "}
+                            Rp {(selectedService.price * parseFloat(inspectionForm.rit)).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-primary-600 mt-1">
+                            ({inspectionForm.rit} rit × Rp {selectedService.price?.toLocaleString()})
+                          </p>
+                        </>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               )}
 
@@ -552,7 +654,12 @@ export default function EmployeeDashboard() {
                 <button
                   type="submit"
                   className="flex-1 btn-primary"
-                  disabled={submitting || !inspectionForm.septic_tank || !inspectionForm.rit}
+                  disabled={
+                    submitting || 
+                    !inspectionForm.septic_tank || 
+                    !inspectionForm.rit || 
+                    !inspectionForm.service_type_id
+                  }
                 >
                   {submitting ? "Menyimpan..." : "Simpan & Kirim Tagihan"}
                 </button>
